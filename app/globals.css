@@ -209,7 +209,14 @@
   --container-form-wide: 800px;
   --container-form: 720px;
   --container-form-sm: 640px;
-  --container-auth: 600px;
+  /* Named --container-auth-form, not --container-auth: a --spacing-auth token
+     already exists (the login column's fluid padding) and Tailwind v4
+     resolves max-w-auth against --spacing-auth when both names collide,
+     silently producing max-width:86.4px instead of 600px. Caught by driving
+     the actual login page with Playwright — the form column rendered at
+     ~17% of its intended width. Every OTHER --container-* token was checked
+     and has no such collision. */
+  --container-auth-form: 600px;
   --container-narrow: 520px;
 
   /* ── Motion ───────────────────────────────────────────────────────────

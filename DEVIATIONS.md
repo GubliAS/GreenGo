@@ -224,6 +224,36 @@ Also for Phase 5: the Landing hero's eyebrow chip (`bg-white/14` + white text) s
 
 ---
 
+## DEV-011 — --spacing-auth / --container-auth name collision (fixed)
+
+**Status:** APPLIED (Phase 2B)
+**Type:** Bug caught by driving the real page, not by reading code
+
+`--spacing-auth` (the login column's fluid padding, `clamp(32px,6vw,96px)`) and `--container-auth` (600px max-width) shared the name `auth`. Tailwind v4 resolved `max-w-auth` against `--spacing-auth` instead of `--container-auth`, so the login form column rendered at **86.4px max-width instead of 600px** — text wrapped one word per line and the whole flow was visually broken.
+
+Caught by actually loading `/login` in Playwright and measuring `getComputedStyle` — the build, typecheck, and every `grep`-based utility audit up to this point passed cleanly, because those checks confirm a class *emits some CSS*, not that it emits the *intended* CSS. A name collision between two theme namespaces is invisible to both.
+
+**Fix:** renamed the container token to `--container-auth-form` → `max-w-auth-form`. Scanned every other `--spacing-*` name against every `--container-*` name — no remaining collisions (see commit).
+
+**Process change going forward:** for every new page, load it in Playwright and spot-check computed layout (widths, not just presence) before considering it done — a visual screenshot alone would not have caught this, since the broken layout still "looked like a page," just a badly proportioned one on first glance.
+
+---
+
+## DEV-012 — Claimed/expired claim-code border reverts to green while focused
+
+**Status:** PENDING backlog — Phase 5
+**Type:** Faithful reproduction of a handoff CSS rule, flagged because it may be unintentional
+
+The handoff's own inline CSS (`GreenGo Login.dc.html`, `GreenGo Add Device.dc.html`) has:
+```css
+input:focus{border-color:#2F9D46 !important}
+```
+This is unconditional — it overrides the claim-code field's red/amber error border while the input has focus, so a user actively editing an already-claimed or expired code sees a green (success-looking) border until they blur. The feedback box below the field still shows the correct error copy and colour throughout.
+
+Reproduced exactly as designed. Flagging because a focus state that visually contradicts an error state below it is the kind of thing worth a deliberate call rather than an inherited accident — options are (a) leave as designed, (b) scope the `!important` focus rule to exclude erroring inputs in Phase 5's a11y pass.
+
+---
+
 ## Pending — no ruling needed yet
 
 DEV-010 awaits your decision. Items discovered during later phases will be appended here with `PENDING` status and raised at the next checkpoint.
