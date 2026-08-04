@@ -254,6 +254,22 @@ Reproduced exactly as designed. Flagging because a focus state that visually con
 
 ---
 
+## DEV-013 — Extrapolated status-pill tones for undesigned states
+
+**Status:** APPLIED (Phase 2D), low-risk — cosmetic only
+**Type:** Authorised expansion beyond the handoff (MANIFEST §D.2)
+
+Two places needed tones for states the handoff's filter/status vocabulary lists but never designs a pill for:
+
+| Field | Designed | Extrapolated (this pass) |
+|---|---|---|
+| `DeviceStatus` (Admin Devices List) | `online` (mint), `unclaimed` (warn) | `offline` → stone, `never_reported` → stone, `disabled` → danger |
+| `CommandStatus` (Commands tables) | `confirmed` (mint), `failed` (danger) | `pending` → warn, `sent` → warn, `expired` → stone |
+
+Reasoning: stone reads as "inert/neutral" (already used for MANUAL and other non-alarming inert states), warn reads as "in progress/needs attention" (already used for the pending pump state), danger is reserved for outcomes that are actually bad. No new colours — all four tones (mint/warn/danger/stone) already exist in `StatusPill`.
+
+---
+
 ## Pending — no ruling needed yet
 
 DEV-010 awaits your decision. Items discovered during later phases will be appended here with `PENDING` status and raised at the next checkpoint.
