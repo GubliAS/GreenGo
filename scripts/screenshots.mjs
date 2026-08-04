@@ -40,6 +40,17 @@ const ALL_ROUTES = [
   ["devices-add", "/devices/add"],
   ["settings", "/settings"],
   ["notifications", "/notifications"],
+  ["admin-fleet", "/admin"],
+  ["admin-devices", "/admin/devices"],
+  ["admin-device-detail", "/admin/devices/gh-1"],
+  ["admin-provision", "/admin/devices/provision"],
+  ["admin-account", "/admin/account"],
+  ["admin-audit", "/admin/audit"],
+  ["admin-tenants", "/admin/tenants"],
+  ["admin-tenant-detail", "/admin/tenants/kwame-asante"],
+  ["admin-commands", "/admin/commands"],
+  ["admin-sms", "/admin/sms"],
+  ["admin-config", "/admin/config"],
   ["dev-tokens", "/dev/tokens"],
 ];
 
