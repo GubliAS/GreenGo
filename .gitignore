@@ -14,3 +14,6 @@ next-env.d.ts
 Thumbs.db
 *.log
 npm-debug.log*
+
+# screenshot output from scripts/screenshots.mjs
+shots/

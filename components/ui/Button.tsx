@@ -41,9 +41,18 @@ const SIZES: Record<ButtonSize, string> = {
   block: "w-full py-3 text-body rounded-menu",
 };
 
+/* Ghost buttons sit next to a primary on photography and carry a 1.5px border.
+ * The handoff compensates with less vertical padding so both end up the same
+ * height: 12.5px vs 14px at md, 13.5px vs 15px at lg. Only md and lg appear
+ * this way in the handoff; other sizes fall through to SIZES. */
+const GHOST_SIZES: Partial<Record<ButtonSize, string>> = {
+  md: "px-6 py-ghost-md text-md rounded-button",
+  lg: "px-6.5 py-ghost-lg text-lg rounded-button",
+};
+
 const BASE =
   "inline-flex items-center justify-center gap-2 font-semibold whitespace-nowrap " +
-  "border-0 transition-colors duration-250 ease-ui cursor-pointer " +
+  "transition-colors duration-250 ease-ui cursor-pointer " +
   "disabled:cursor-not-allowed";
 
 function classesFor(
@@ -54,7 +63,13 @@ function classesFor(
 ) {
   // A disabled control always takes the stone treatment, whatever it started as.
   const v = disabled ? VARIANTS.disabled : VARIANTS[variant];
-  return [BASE, v, SIZES[size], className].filter(Boolean).join(" ");
+  // Ghost/outline variants keep their border; everything else has none.
+  const bordered = variant === "ghostOnPhoto" || variant === "outline";
+  const sizing =
+    variant === "ghostOnPhoto" && !disabled ? (GHOST_SIZES[size] ?? SIZES[size]) : SIZES[size];
+  return [BASE, bordered ? "" : "border-0", v, sizing, className]
+    .filter(Boolean)
+    .join(" ");
 }
 
 export function Button({

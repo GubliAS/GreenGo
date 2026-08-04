@@ -183,6 +183,14 @@
   --spacing-auth: clamp(32px, 6vw, 96px);          /*  1 · login form column */
   --spacing-band: clamp(32px, 5vw, 64px);          /*  1 · Landing green band */
   --spacing-hero-x: clamp(24px, 5vw, 72px);        /*  1 · Landing hero inner */
+
+  /* Ghost-button vertical padding. The handoff gives ghost/outline buttons on
+     photography 1.5px LESS vertical padding than the primary beside them
+     (12.5 vs 14 at md, 13.5 vs 15 at lg) so the 1.5px border does not make them
+     taller. Named tokens because Tailwind's spacing multiplier rejects the
+     3-decimal values these need (py-3.125 / py-3.375 do not generate). */
+  --spacing-ghost-md: 12.5px;
+  --spacing-ghost-lg: 13.5px;
   --spacing-cta-top: clamp(56px, 8vw, 96px);       /*  1 · CTA band top */
   --spacing-cta-bottom: clamp(48px, 6vw, 64px);    /*  1 · CTA band bottom */
   --spacing-cta-band: clamp(32px, 5vw, 56px);      /*  1 · How-It-Works green CTA */
