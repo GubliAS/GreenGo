@@ -169,6 +169,61 @@ The handoff has no CSS media queries except 4 × `prefers-reduced-motion`. Respo
 
 ---
 
+## DEV-009 — Ghost-button padding moved into the component
+
+**Status:** APPLIED (Phase 2A)
+**Type:** Faithful implementation of a detail that could not be expressed inline
+
+The handoff gives ghost buttons on photography **less** vertical padding than the primary button beside them, so their 1.5px border does not make them taller:
+
+| Context | primary | ghost | designed result |
+|---|---|---|---|
+| Landing hero | `14px 26px` | `12.5px 24px` + 1.5px border | equal height |
+| Landing CTA band | `15px 28px` | `13.5px 26px` + 1.5px border | equal height |
+
+Tailwind's spacing multiplier rejects the 3-decimal values these need (`py-3.125` and `py-3.375` generate no CSS — a silent failure). Added `--spacing-ghost-md: 12.5px` and `--spacing-ghost-lg: 13.5px`, applied inside `Button` when `variant="ghostOnPhoto"`.
+
+Also fixed: `border-0` was being applied unconditionally in `Button`, which would have stripped the border from the `ghostOnPhoto` and `outline` variants.
+
+**No visual deviation** — this makes the handoff's intent reproducible rather than changing it.
+
+---
+
+## DEV-010 — Handoff photography is too low-resolution for full-bleed use
+
+**Status:** PENDING — needs your decision
+**Type:** Asset quality
+
+| File | Intrinsic size | Rendered at 1440 | Upscale |
+|---|---|---|---|
+| `hero-field.jpg` | 735 × 490 | 1400 × 680 | **~2.5×** |
+| `footer-greenhouse.jpg` | 736 × 414 | 1400 × 595 | **~2.5×** |
+| `login-greenhouse.jpg` | 704 × 1024 | half-screen panel | acceptable |
+
+The two full-bleed marketing photos are being upscaled roughly 2.5× on desktop, and more on a 2× device. They will read visibly soft. At 390px wide they are fine.
+
+The handoff README already says these are "placeholder/stock-style photos; replace with real product photography in production", so this is expected — but it is worth stating as a measured number rather than a general note, because it affects the marketing site's perceived quality most on the largest screens.
+
+**Options:** (a) ship as-is and replace with real photography later; (b) constrain the hero's max height so the upscale factor drops; (c) source higher-resolution stock for the demo. **No action taken** — awaiting your call. Detected automatically by `scripts/screenshots.mjs`, which now flags any image rendered >1.25× its intrinsic width.
+
+---
+
+## Phase 5 backlog — recorded now, fixed in Phase 5
+
+Found by `scripts/screenshots.mjs` at 390px and 1440px. All are **faithful to the handoff** as built; the handoff claims ≥44px only for "primary buttons/inputs", which these are not. Listed so none is lost.
+
+| Element | Measured | Where |
+|---|---|---|
+| Footer links | **20px** high | all 5 marketing pages, both viewports |
+| Desktop nav links | **38px** high | all 5 marketing pages @1440 |
+| `Log in` nav link | 46 × **38px** | all 5 marketing pages @1440 |
+| Logo link | 110 × **30px** | all pages |
+| `/dev/tokens` demo controls | various <44px | dev-only route, not user-facing |
+
+Also for Phase 5: the Landing hero's eyebrow chip (`bg-white/14` + white text) sits over the brightest part of the photograph and has poor contrast. It is exactly as designed in the handoff, so it needs a real contrast measurement and a minimal fix.
+
+---
+
 ## Pending — no ruling needed yet
 
-Nothing outstanding. Items discovered during Phases 1–5 will be appended here with `PENDING` status and raised at the next checkpoint.
+DEV-010 awaits your decision. Items discovered during later phases will be appended here with `PENDING` status and raised at the next checkpoint.

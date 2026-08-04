@@ -52,7 +52,15 @@ const viewports =
 
 mkdirSync(OUT, { recursive: true });
 
-const browser = await chromium.launch();
+/* Playwright ≥1.5x defaults to chrome-headless-shell, which may not be present
+ * (its CDN download can fail independently of the full Chromium download).
+ * `channel: "chromium"` uses the full browser instead. Override with
+ * CHROME_PATH if you have a Chrome/Chromium elsewhere. */
+const browser = await chromium.launch(
+  process.env.CHROME_PATH
+    ? { executablePath: process.env.CHROME_PATH }
+    : { channel: "chromium" },
+);
 const problems = [];
 
 for (const [vpName, width, height] of viewports) {
@@ -67,36 +75,130 @@ for (const [vpName, width, height] of viewports) {
     if (m.type() === "error") errors.push(m.text());
   });
   page.on("pageerror", (e) => errors.push(`pageerror: ${e.message}`));
+  // Name the failing URL — "404 (Not Found)" alone is not actionable.
+  page.on("response", (r) => {
+    if (r.status() >= 400) errors.push(`HTTP ${r.status()} → ${r.url()}`);
+  });
 
   for (const [name, path] of routes) {
     errors.length = 0;
     let res;
     try {
-      res = await page.goto(BASE + path, { waitUntil: "networkidle", timeout: 30000 });
+      /* "load", not "networkidle": these pages run a 1s interval and, in dev,
+       * an HMR socket — neither ever goes idle, so networkidle just times out. */
+      res = await page.goto(BASE + path, { waitUntil: "load", timeout: 45000 });
+      await page.waitForLoadState("domcontentloaded");
     } catch (e) {
       problems.push(`${name} @${vpName}: navigation failed — ${e.message}`);
       continue;
     }
-    await page.waitForTimeout(900); // fonts + entrance animations
+    await page.evaluate(() => document.fonts.ready);
+
+    /* next/image lazy-loads anything below the fold, and Chromium's fullPage
+     * capture does NOT fire IntersectionObserver for off-screen images — so
+     * below-fold photos screenshot blank unless we scroll first. Scroll to the
+     * bottom, back to the top, then wait for every <img> to actually decode. */
+    await page.evaluate(async () => {
+      const step = window.innerHeight * 0.8;
+      for (let y = 0; y < document.body.scrollHeight; y += step) {
+        window.scrollTo(0, y);
+        await new Promise((r) => setTimeout(r, 120));
+      }
+      window.scrollTo(0, 0);
+    });
+    try {
+      await page.waitForFunction(
+        () =>
+          Array.from(document.querySelectorAll("img")).every(
+            (i) => i.complete && i.naturalWidth > 0,
+          ),
+        { timeout: 15000 },
+      );
+    } catch {
+      const blank = await page.evaluate(() =>
+        Array.from(document.querySelectorAll("img"))
+          .filter((i) => !i.complete || i.naturalWidth === 0)
+          .map((i) => i.getAttribute("src")?.slice(0, 80) ?? "(no src)"),
+      );
+      problems.push(`${name} @${vpName}: IMAGE never loaded: ${blank.join(", ")}`);
+    }
+
+    await page.waitForTimeout(900); // entrance animations settle
 
     await page.screenshot({ path: `${OUT}/${name}-${vpName}.png`, fullPage: true });
+
+    /* Upscaled photography reads soft on the 2x screens these users are on.
+     * Flag any image rendered materially larger than its intrinsic size. */
+    const upscaled = await page.evaluate(() =>
+      Array.from(document.querySelectorAll("img"))
+        .filter((i) => i.naturalWidth > 0)
+        .map((i) => {
+          const r = i.getBoundingClientRect();
+          return {
+            src: (i.currentSrc || i.src).split("/").pop()?.slice(0, 50),
+            ratio: r.width / i.naturalWidth,
+            rendered: Math.round(r.width),
+            natural: i.naturalWidth,
+          };
+        })
+        .filter((x) => x.ratio > 1.25),
+    );
+    for (const u of upscaled) {
+      problems.push(
+        `${name} @${vpName}: UPSCALED ${u.src} rendered ${u.rendered}px from ${u.natural}px (${u.ratio.toFixed(1)}×)`,
+      );
+    }
 
     const audit = await page.evaluate((vw) => {
       const de = document.documentElement;
       const wide = [];
       const small = [];
+
+      /* An element wider than the viewport is fine if an ancestor scrolls it —
+       * that IS the handoff's designed table behaviour (min-width inside
+       * overflow-x:auto). Only unscrollable overflow is a defect. */
+      const inScroller = (el) => {
+        for (let p = el.parentElement; p && p !== document.body; p = p.parentElement) {
+          const ov = getComputedStyle(p).overflowX;
+          if (ov === "auto" || ov === "scroll") return true;
+        }
+        return false;
+      };
+
+      /* Inline links inside a paragraph legitimately cannot be 44px tall.
+       * Only flag standalone controls: buttons, and links that are not sitting
+       * inside flowing prose. */
+      const isStandaloneControl = (el) => {
+        if (el.matches("button,input,select,textarea,[role=button],[role=tab],[role=option]"))
+          return true;
+        if (!el.matches("a")) return false;
+        const p = el.parentElement;
+        if (!p) return false;
+        const display = getComputedStyle(p).display;
+        // Links inside prose (a <p>, or text-bearing block) are excluded.
+        if (p.tagName === "P") return false;
+        const siblingText = Array.from(p.childNodes).some(
+          (n) => n.nodeType === 3 && n.textContent.trim().length > 0,
+        );
+        if (siblingText) return false;
+        return display.includes("flex") || display.includes("grid") || display === "block";
+      };
+
       for (const el of document.querySelectorAll("body *")) {
         const r = el.getBoundingClientRect();
         if (r.height <= 0 || r.width <= 0) continue;
-        if (r.width > vw + 1) {
+
+        if (r.width > vw + 1 && !inScroller(el)) {
           wide.push(
             `${el.tagName.toLowerCase()}[${(el.className || "").toString().slice(0, 50)}] w=${Math.round(r.width)}`,
           );
         }
-        const interactive =
-          el.matches("a,button,input,select,textarea,[role=button],[role=tab],[role=option]") &&
-          !el.hasAttribute("disabled");
-        if (interactive && (r.height < 44 || r.width < 24)) {
+
+        if (
+          !el.hasAttribute("disabled") &&
+          isStandaloneControl(el) &&
+          (r.height < 44 || r.width < 24)
+        ) {
           small.push(
             `${el.tagName.toLowerCase()}[${(el.textContent || "").trim().slice(0, 24)}] ${Math.round(r.width)}x${Math.round(r.height)}`,
           );
@@ -106,7 +208,7 @@ for (const [vpName, width, height] of viewports) {
         scrollW: de.scrollWidth,
         clientW: de.clientWidth,
         wide: wide.slice(0, 4),
-        small: small.slice(0, 6),
+        small: small.slice(0, 8),
         smallCount: small.length,
       };
     }, width);
