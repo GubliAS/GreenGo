@@ -27,6 +27,19 @@ const ALL_ROUTES = [
   ["live-demo", "/live-demo"],
   ["pricing", "/pricing"],
   ["contact", "/contact"],
+  ["login", "/login"],
+  ["forgot-password", "/forgot-password"],
+  ["set-password", "/set-password"],
+  ["admin-login", "/admin/login"],
+  ["devices", "/devices"],
+  ["device-dashboard", "/devices/gh-1"],
+  ["device-irrigation", "/devices/gh-1/irrigation"],
+  ["device-alerts", "/devices/gh-1/alerts"],
+  ["device-history", "/devices/gh-1/history"],
+  ["device-calibration", "/devices/gh-1/calibration"],
+  ["devices-add", "/devices/add"],
+  ["settings", "/settings"],
+  ["notifications", "/notifications"],
   ["dev-tokens", "/dev/tokens"],
 ];
 
@@ -153,6 +166,30 @@ for (const [vpName, width, height] of viewports) {
       const de = document.documentElement;
       const wide = [];
       const small = [];
+      const suspiciousMaxWidth = [];
+
+      /* DEV-011 class of bug: a named max-w-<token> utility silently resolving
+       * against the WRONG theme namespace (e.g. --spacing-auth instead of
+       * --container-auth) because two tokens shared a suffix. The class still
+       * emits real CSS, so build/typecheck/grep-based audits see nothing wrong
+       * — only a computed-layout check catches it. Heuristic: every named
+       * container token in this project is >=520px; a max-w-<word> (not
+       * max-w-full/none/screen/prose or a numeric/bracket value) computing
+       * under 200px at a normal desktop-range viewport is almost certainly
+       * this bug, not a deliberate design choice. */
+      if (vw >= 700) {
+        for (const el of document.querySelectorAll('[class*="max-w-"]')) {
+          const cls = (el.className || "").toString();
+          const named = cls.match(/max-w-([a-z][a-z0-9-]*)/);
+          if (!named) continue;
+          const word = named[1];
+          if (["full", "none", "screen", "prose", "min", "max", "fit"].includes(word)) continue;
+          const mw = parseFloat(getComputedStyle(el).maxWidth);
+          if (Number.isFinite(mw) && mw > 0 && mw < 200) {
+            suspiciousMaxWidth.push(`max-w-${word} computed ${Math.round(mw)}px`);
+          }
+        }
+      }
 
       /* An element wider than the viewport is fine if an ancestor scrolls it —
        * that IS the handoff's designed table behaviour (min-width inside
@@ -210,8 +247,13 @@ for (const [vpName, width, height] of viewports) {
         wide: wide.slice(0, 4),
         small: small.slice(0, 8),
         smallCount: small.length,
+        suspiciousMaxWidth: [...new Set(suspiciousMaxWidth)],
       };
     }, width);
+
+    for (const s of audit.suspiciousMaxWidth) {
+      problems.push(`${name} @${vpName}: SUSPICIOUS-MAX-WIDTH ${s} (DEV-011 class of bug?)`);
+    }
 
     if (audit.scrollW > audit.clientW + 1) {
       problems.push(

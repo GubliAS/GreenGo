@@ -18,6 +18,7 @@ export type ButtonSize =
   | "md" // 14px 26px · 14.5px — default primary
   | "lg" // 15px 28px · 15px — CTA bands
   | "admin" // 11px 20px · 13.5px — admin page actions
+  | "form" // 13px 24px · 14px — Settings / Admin Account "Save changes"
   | "sm" // 9px 14px · 13px — inline outline/destructive
   | "block"; // w-full 12px · 13.5px — pump control
 
@@ -37,6 +38,7 @@ const SIZES: Record<ButtonSize, string> = {
   md: "px-6.5 py-3.5 text-md rounded-button",
   lg: "px-7 py-3.75 text-lg rounded-button",
   admin: "px-5 py-2.75 text-body rounded-menu",
+  form: "px-6 py-3.25 text-base rounded-button",
   sm: "px-3.5 py-2.25 text-sm rounded-sm",
   block: "w-full py-3 text-body rounded-menu",
 };

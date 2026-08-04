@@ -35,7 +35,12 @@ export function AuthShell({
           src="/login-greenhouse.jpg"
           alt=""
           fill
-          sizes="50vw"
+          /* Below 760px the two-column grid stacks (minmax(300px,1fr) can't
+           * fit two tracks), so the photo column becomes full-width, not half.
+           * A flat "50vw" hint made the browser fetch a half-resolution source
+           * and stretch it 2x on mobile — caught by the screenshot harness's
+           * upscale check, not by anything that reads the JSX. */
+          sizes="(max-width: 759px) 100vw, 50vw"
           className="object-cover opacity-55"
           priority
         />
