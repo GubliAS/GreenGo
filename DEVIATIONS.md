@@ -288,6 +288,27 @@ What was **not** verified: an actual `prisma migrate dev` / `db:seed` run agains
 
 ---
 
+## Phase 4A note — device endpoint verified by typecheck + logic trace, not a live run
+
+**Status:** informational, not a deviation
+**Type:** verification method disclosure (Docker still unavailable — see the Phase 3 note above)
+
+`POST /api/telemetry`, `lib/commands.ts`, `lib/alerts.ts`, `lib/sms.ts`, and `lib/device-auth.ts` all typecheck cleanly against the real generated Prisma types (same evidentiary weight as Phase 3's seed script check — every field name, relation, and enum value used is checked against the actual schema). The full request handler was manually traced end-to-end for each interlock path (disabled device, MANUAL rejection, cooldown, daily cap, TTL expiry, SENT→CONFIRMED/FAILED reconciliation) but not executed against a live Postgres.
+
+**Simplification, not a bug:** quiet hours are a fleet-wide default read from `QUIET_HOURS_START_HOUR`/`QUIET_HOURS_END_HOUR` env vars, not the per-device values the tenant Alerts page UI displays (9:00 PM–5:30 AM in the mock). The schema has no per-tenant quiet-hours column yet — adding one is a small follow-up, not a redesign, when this is verified live.
+
+Once `DATABASE_URL` is set and migrated/seeded, verify with:
+```
+curl -X POST http://localhost:3000/api/telemetry \
+  -H "Content-Type: application/json" \
+  -H "X-Device-Mac: A4:CF:12:8E:3B:01" \
+  -H "X-Device-Api-Key: ggk_4f9a2c8b1e6d3f7a2c8b1e6d3f2a" \
+  -d '{"soilRaw":420,"tempC":26.5,"humidityPct":61,"relayOn":false,"mode":"AUTO","signalDbm":-62,"batteryV":3.9}'
+```
+(API key matches the seed script's `device` record — see `prisma/seed.ts`.)
+
+---
+
 ## Pending — no ruling needed yet
 
 DEV-010 awaits your decision. Items discovered during later phases will be appended here with `PENDING` status and raised at the next checkpoint.
