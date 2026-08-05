@@ -27,6 +27,16 @@ CREATE TYPE "SmsStatus" AS ENUM ('QUEUED', 'SENT', 'DELIVERED', 'FAILED', 'UNDEL
 CREATE TYPE "AuditAction" AS ENUM ('LOGIN_SUCCESS', 'LOGIN_FAILURE', 'LOGOUT', 'DEVICE_PROVISIONED', 'DEVICE_CLAIMED', 'DEVICE_UNCLAIMED', 'DEVICE_VIEWED', 'API_KEY_REGENERATED', 'COMMAND_ISSUED', 'CALIBRATION_SET', 'ALERT_RULES_UPDATED', 'PASSWORD_CHANGED');
 
 -- CreateTable
+CREATE TABLE "login_attempts" (
+    "id" TEXT NOT NULL,
+    "identifier" TEXT NOT NULL,
+    "attempts" INTEGER NOT NULL DEFAULT 0,
+    "lastAttemptAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "login_attempts_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "tenants" (
     "id" TEXT NOT NULL,
     "name" TEXT NOT NULL,
@@ -222,6 +232,9 @@ CREATE TABLE "audit_log" (
 
     CONSTRAINT "audit_log_pkey" PRIMARY KEY ("id")
 );
+
+-- CreateIndex
+CREATE UNIQUE INDEX "login_attempts_identifier_key" ON "login_attempts"("identifier");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "tenants_phoneE164_key" ON "tenants"("phoneE164");

@@ -309,6 +309,34 @@ curl -X POST http://localhost:3000/api/telemetry \
 
 ---
 
+## Phase 4B — scope decisions on data-layer wiring
+
+**Status:** informational — reporting what was skipped and why, per the working rules
+**Type:** scope decision, not an oversight
+
+"Wire all pages off mock data" spans ~24 routes. Given the remaining phases (5: responsive audit, 6: final verification + README) still needed real time in this session, I prioritised depth on the interactions the brief calls out explicitly, over breadth across every read page. What's real vs. what's still Phase 2 mock data:
+
+### Fully wired (real session, real Prisma queries, real writes)
+- **Session infrastructure**: `lib/session.ts` (signed httpOnly JWT cookie, jose/Edge-compatible), `proxy.ts` (route protection — tenant area requires a tenant session, admin area requires an admin session, redirect-with-`from` on failure)
+- **Login**: `/login` (tenant, phone+password) and `/admin/login` (admin, email+password) — both call real endpoints with progressive delay + no-enumeration behaviour
+- **Logout**: every "Log out" control (`LogoutLink`) now actually clears the session and audits the event
+- **Claim redemption**: `/login`'s claim tab (`/api/auth/register`) and `/devices/add` (`/api/auth/claim-device`) — both atomic (`updateMany` with an unconsumed/unexpired WHERE clause), both check phone/tenant ownership server-side
+- **Device provisioning**: `/admin/devices/provision` (`/api/admin/devices/provision`) — the admin-side counterpart to claim redemption
+- **Pump control**: the Device Dashboard's toggle (`/api/devices/[id]/pump`) — the flagship interaction, running through every interlock in `lib/commands.ts`
+- **Reads**: `/devices` (tenant's own devices), `/devices/[id]` (single device + latest reading + 24-point chart, ownership-checked), `/settings` (real session user), `/admin` (fleet-wide counts, live strip, activity feed, SMS spend — all real aggregates), `/admin/devices` (real device rows + real tenant names), `/admin/account` (real admin user)
+
+### Still Phase 2 mock/static data — not wired this pass
+- `/devices/[id]/alerts`, `/devices/[id]/calibration`, `/devices/[id]/history`, `/devices/[id]/irrigation`, `/notifications` — reads stay on their Phase 2C mock data; none of these have a write path either (Alerts' "Save thresholds" was already non-functional in Phase 2 — the handoff designs no validation states for these forms)
+- `/admin/devices/[id]` (all 6 tabs), `/admin/tenants`, `/admin/tenants/[id]`, `/admin/commands`, `/admin/sms`, `/admin/config`, `/admin/audit` — all still render their Phase 2D mock rows
+- Settings' and Admin Account's "Save changes" buttons are not wired to a write endpoint
+
+None of the skipped pages needed new UI work — they were already built in Phase 2 to spec. The gap is purely "reads from a mock array" vs. "reads from Prisma." Converting each remaining page follows the exact pattern already established four times over (`/devices`, `/devices/[id]`, `/admin`, `/admin/devices`): make the page an async Server Component, call `db.<model>.findMany/findFirst` scoped by session, map to the same prop shapes the Phase 2 components already expect.
+
+### OTP verification remains client-side mocked
+Every claim/register flow keeps the Phase 2 mock OTP (`1234` verifies, `9999` expires, anything else fails) rather than a real SMS-delivered one-time code. Building real OTP requires a storage table (code, expiry, attempt count), delivery through `lib/sms.ts`, and resend-cooldown enforcement server-side (the client-side 30s timer today is trivially bypassable). The claim code redemption and account creation *behind* the OTP step are fully real — this only affects proof-of-phone-ownership fidelity, not data integrity.
+
+---
+
 ## Pending — no ruling needed yet
 
 DEV-010 awaits your decision. Items discovered during later phases will be appended here with `PENDING` status and raised at the next checkpoint.

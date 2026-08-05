@@ -4,13 +4,32 @@ import { AppTopBar } from "@/components/nav/AppTopBar";
 import { Card, CardTitle, PageTitle } from "@/components/ui/Card";
 import { FormField } from "@/components/ui/FormField";
 import { Button } from "@/components/ui/Button";
+import { LogoutLink } from "@/components/auth/LogoutLink";
+import { db, requireTenantId } from "@/lib/db";
+import { getSession } from "@/lib/session";
 
 /* Settings → /settings · source: GreenGo Settings.dc.html
- * Spec: handoff/tenant.md §6. Copy verbatim. */
+ * Spec: handoff/tenant.md §6. Copy verbatim.
+ *
+ * Account/device fields are read from the real session + database. "Save
+ * changes" is not wired to a write endpoint — same scope cut as the Alerts
+ * page's thresholds form (handoff/tenant.md §4 notes no validation states
+ * are even designed for these forms). Logged in DEVIATIONS.md, not silently
+ * dropped. */
 
 export const metadata: Metadata = { title: "Settings — GreenGo" };
+export const dynamic = "force-dynamic"; // reads the real session + account row
 
-export default function SettingsPage() {
+export default async function SettingsPage() {
+  const session = await getSession();
+  const tenantId = requireTenantId(session?.kind === "tenant" ? session : null);
+
+  const user = await db.user.findUnique({ where: { id: session!.userId } });
+  const device = await db.device.findFirst({ where: { tenantId }, orderBy: { createdAt: "asc" } });
+  const claimCode = device
+    ? await db.claimCode.findFirst({ where: { deviceId: device.id, consumedAt: { not: null } } })
+    : null;
+
   return (
     <div className="min-h-screen">
       <AppTopBar active="settings" />
@@ -20,11 +39,11 @@ export default function SettingsPage() {
         <Card className="flex flex-col gap-4">
           <CardTitle>Account</CardTitle>
           <div className="grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-4">
-            <FormField label="Name" size="sm" defaultValue="Kwame Asante" name="name" />
+            <FormField label="Name" size="sm" defaultValue={user?.name} name="name" />
             <FormField
               label="Email or phone"
               size="sm"
-              defaultValue="kwame@farm.com"
+              defaultValue={user?.email ?? user?.phoneE164}
               readOnly
               hint="Contact support to change your login email or phone."
               name="contact"
@@ -32,21 +51,26 @@ export default function SettingsPage() {
           </div>
         </Card>
 
-        <Card className="flex flex-col gap-3.5">
-          <CardTitle>Device</CardTitle>
-          <div className="bg-app rounded-tile flex items-center justify-between px-3.5 py-3">
-            <span className="text-body text-canopy">
-              Greenhouse 1 — claim code GG-4F82-K1
-            </span>
-            <span className="text-caption text-muted">Claimed 2 months ago</span>
-          </div>
-          <Link
-            href="/devices/gh-1/calibration"
-            className="text-sm self-start font-semibold"
-          >
-            Re-run calibration
-          </Link>
-        </Card>
+        {device && (
+          <Card className="flex flex-col gap-3.5">
+            <CardTitle>Device</CardTitle>
+            <div className="bg-app rounded-tile flex items-center justify-between px-3.5 py-3">
+              <span className="text-body text-canopy">
+                {device.label ?? device.mac}
+                {claimCode ? ` — claim code ${claimCode.code}` : ""}
+              </span>
+              <span className="text-caption text-muted">
+                {device.claimedAt ? `Claimed ${relativeDays(device.claimedAt)}` : "Unclaimed"}
+              </span>
+            </div>
+            <Link
+              href={`/devices/${device.id}/calibration`}
+              className="text-sm self-start font-semibold"
+            >
+              Re-run calibration
+            </Link>
+          </Card>
+        )}
 
         <Card className="flex flex-col gap-3.5">
           <CardTitle>Password</CardTitle>
@@ -63,11 +87,17 @@ export default function SettingsPage() {
           <Button variant="primary" size="form">
             Save changes
           </Button>
-          <Link href="/" className="text-sm text-danger font-semibold">
-            Log out
-          </Link>
+          <LogoutLink className="text-sm text-danger font-semibold" />
         </div>
       </div>
     </div>
   );
+}
+
+function relativeDays(date: Date): string {
+  const days = Math.max(0, Math.round((Date.now() - date.getTime()) / (24 * 3600 * 1000)));
+  if (days < 1) return "today";
+  if (days < 30) return `${days} day${days === 1 ? "" : "s"} ago`;
+  const months = Math.round(days / 30);
+  return `${months} month${months === 1 ? "" : "s"} ago`;
 }

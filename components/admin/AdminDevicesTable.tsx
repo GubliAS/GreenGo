@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Dropdown } from "../ui/Dropdown";
 import { Cell, DataTable, TableRow, type Column } from "../ui/DataTable";
@@ -9,7 +9,11 @@ import { StatusPill, type PillTone } from "../ui/StatusPill";
 /* Admin Devices List → /admin/devices · source: GreenGo Admin Devices List.dc.html
  * Spec: handoff/admin.md §2. Only Online/Unclaimed have designed row
  * treatments (MANIFEST §D.2); Offline/Never reported/Disabled extrapolated
- * here and logged as DEV-013. */
+ * here and logged as DEV-013.
+ *
+ * Phase 4B: rows come from the real database via the server-component page
+ * wrapper, passed in as `devices` — this component only owns the
+ * search/filter UI state. */
 
 const COLUMNS: Column[] = [
   { key: "label", header: "Label", width: "1.1fr" },
@@ -21,9 +25,18 @@ const COLUMNS: Column[] = [
   { key: "actions", header: "Actions", width: "0.8fr" },
 ];
 
-type Status = "Online" | "Offline" | "Never reported" | "Unclaimed" | "Disabled";
+export type AdminDeviceRow = {
+  id: string;
+  label: string;
+  mac: string;
+  tenant: string;
+  status: "Online" | "Offline" | "Never reported" | "Unclaimed" | "Disabled";
+  lastSeen: string;
+  firmware: string;
+  href: string;
+};
 
-const STATUS_TONE: Record<Status, PillTone> = {
+const STATUS_TONE: Record<AdminDeviceRow["status"], PillTone> = {
   Online: "mint",
   Offline: "stone",
   "Never reported": "stone",
@@ -31,44 +44,26 @@ const STATUS_TONE: Record<Status, PillTone> = {
   Disabled: "danger",
 };
 
-const DEVICES: {
-  label: string;
-  mac: string;
-  tenant: string;
-  status: Status;
-  lastSeen: string;
-  firmware: string;
-  href: string;
-}[] = [
-  {
-    label: "Greenhouse 1",
-    mac: "A4:CF:12:8E:3B:01",
-    tenant: "Kwame Asante",
-    status: "Online",
-    lastSeen: "8s ago",
-    firmware: "v1.4.2",
-    href: "/admin/devices/gh-1",
-  },
-  {
-    label: "—",
-    mac: "A4:CF:12:8E:3B:02",
-    tenant: "Unclaimed",
-    status: "Unclaimed",
-    lastSeen: "never",
-    firmware: "v1.4.2",
-    href: "/admin/devices/provision",
-  },
-];
-
-export function AdminDevicesTable() {
+export function AdminDevicesTable({ devices }: { devices: AdminDeviceRow[] }) {
+  const [search, setSearch] = useState("");
   const [status, setStatus] = useState("All statuses");
   const [tenant, setTenant] = useState("All tenants");
 
-  const filtered = DEVICES.filter(
-    (d) =>
-      (status === "All statuses" || d.status === status) &&
-      (tenant === "All tenants" || d.tenant === tenant),
+  const tenantOptions = useMemo(
+    () => ["All tenants", ...Array.from(new Set(devices.map((d) => d.tenant)))],
+    [devices],
   );
+
+  const filtered = devices.filter((d) => {
+    const q = search.trim().toLowerCase();
+    const matchesSearch =
+      !q || d.mac.toLowerCase().includes(q) || d.label.toLowerCase().includes(q);
+    return (
+      matchesSearch &&
+      (status === "All statuses" || d.status === status) &&
+      (tenant === "All tenants" || d.tenant === tenant)
+    );
+  });
 
   return (
     <div className="flex flex-col gap-4.5">
@@ -76,6 +71,8 @@ export function AdminDevicesTable() {
         <input
           type="text"
           placeholder="Search by MAC or label"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
           className="border-hair border-line rounded-input min-w-55 box-border flex-1 bg-white px-3.5 py-2.5 text-sm"
         />
         <Dropdown
@@ -84,12 +81,7 @@ export function AdminDevicesTable() {
           onChange={setStatus}
           options={["All statuses", "Online", "Offline", "Never reported", "Unclaimed", "Disabled"]}
         />
-        <Dropdown
-          label="Tenant"
-          value={tenant}
-          onChange={setTenant}
-          options={["All tenants", "Kwame Asante", "Unclaimed"]}
-        />
+        <Dropdown label="Tenant" value={tenant} onChange={setTenant} options={tenantOptions} />
       </div>
 
       <DataTable columns={COLUMNS} minWidth={820} caption="Devices">
@@ -99,7 +91,7 @@ export function AdminDevicesTable() {
           </div>
         ) : (
           filtered.map((d) => (
-            <TableRow key={d.mac} columns={COLUMNS} minWidth={820}>
+            <TableRow key={d.id} columns={COLUMNS} minWidth={820}>
               <Cell tone="canopy">{d.label}</Cell>
               <Cell tone="muted" mono className="text-meta">
                 {d.mac}

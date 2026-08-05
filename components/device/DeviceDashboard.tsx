@@ -9,17 +9,28 @@ import { StateSwitcher, RangePills } from "../ui/SegmentedControl";
 import { MoistureChart } from "./MoistureChart";
 import { PumpControl } from "./PumpControl";
 import { MetricReadout } from "../ui/StatCard";
+import { useToast } from "../ui/Toast";
 import { describeMoisture } from "@/lib/moisture";
-import type { DeviceState } from "@/lib/types";
+import type { DeviceState, PumpMode } from "@/lib/types";
 
 /* Device dashboard → /devices/[id] · source: GreenGo Device Dashboard.dc.html
  * Spec: handoff/tenant.md §2. The reference screen — all three device states
- * designed. Mock state toggle stands in for the real lastSeenAt-derived state
- * until Phase 4B. */
+ * designed.
+ *
+ * Phase 4B: the page wrapper fetches the real device (ownership-checked
+ * against the session) and passes its actual state down as `initial*` props.
+ * The 3-state switcher stays — it is a designed showcase control in the
+ * handoff itself (the "demoState/liveState switcher" the README calls out),
+ * not Phase-2 scaffolding — but it now starts from the device's REAL derived
+ * state instead of a hardcoded "confirmed". The pump button, when the real
+ * state is confirmed, calls the real POST /api/devices/[id]/pump endpoint;
+ * switching the demo control to pending/unknown previews those states
+ * without touching the backend, exactly as the handoff's own switcher does. */
 
 const RANGES = ["12h", "24h", "48h", "Week", "Month"] as const;
 
-function buildChartPoints(): number[] {
+function buildChartPoints(seed: number[]): number[] {
+  if (seed.length > 0) return seed;
   return Array.from({ length: 24 }, (_, i) => {
     const h = 22 + Math.round(Math.sin(i / 2.4) * 14 + (i % 5) * 3);
     return Math.max(8, Math.min(100, h));
@@ -29,17 +40,66 @@ function buildChartPoints(): number[] {
 export function DeviceDashboard({
   deviceId,
   deviceLabel,
+  initialState = "confirmed",
+  initialPercent = 38,
+  initialRelayOn = false,
+  initialMode = "AUTO",
+  initialMetrics = { tempC: null, humidityPct: null, lightLux: null, batteryV: null },
+  lastSeenLabel = "Last updated 6s ago",
+  chartSeed = [],
 }: {
   deviceId: string;
   deviceLabel: string;
+  initialState?: DeviceState;
+  initialPercent?: number;
+  initialRelayOn?: boolean;
+  initialMode?: PumpMode;
+  initialMetrics?: {
+    tempC: number | null;
+    humidityPct: number | null;
+    lightLux: number | null;
+    batteryV: number | null;
+  };
+  lastSeenLabel?: string;
+  chartSeed?: number[];
 }) {
-  const [state, setState] = useState<DeviceState>("confirmed");
+  const toast = useToast();
+  const [state, setState] = useState<DeviceState>(initialState);
   const [range, setRange] = useState<(typeof RANGES)[number]>("24h");
-  const [relayOn, setRelayOn] = useState(false);
+  const [relayOn, setRelayOn] = useState(initialRelayOn);
+  const [busy, setBusy] = useState(false);
 
   const isUnknown = state === "unknown";
-  const percent = isUnknown ? 24 : 38;
-  const chartPoints = buildChartPoints();
+  const percent = isUnknown ? initialPercent : initialPercent;
+  const chartPoints = buildChartPoints(chartSeed);
+
+  async function handleToggle() {
+    setBusy(true);
+    const action = relayOn ? "PUMP_OFF" : "PUMP_ON";
+    try {
+      const res = await fetch(`/api/devices/${deviceId}/pump`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.ok) {
+        toast.push({ tone: "danger", title: "Pump command failed", body: data.error });
+        return;
+      }
+      setState("pending");
+      setTimeout(() => {
+        setRelayOn(action === "PUMP_ON");
+        setState("confirmed");
+        toast.push({
+          tone: "success",
+          title: action === "PUMP_ON" ? "Pump turned on" : "Pump turned off",
+        });
+      }, 2500);
+    } finally {
+      setBusy(false);
+    }
+  }
 
   return (
     <div className="max-w-wide mx-auto flex flex-col gap-4.5">
@@ -105,7 +165,7 @@ export function DeviceDashboard({
           />
 
           <div className="text-meta text-muted">
-            {isUnknown ? "Last reading 4 min ago — treat as stale" : "Last updated 6s ago"}
+            {isUnknown ? "Last reading 4 min ago — treat as stale" : lastSeenLabel}
           </div>
 
           <div className="border-hairline flex flex-col gap-3.5 border-t pt-4.5">
@@ -131,17 +191,33 @@ export function DeviceDashboard({
 
         <div className="flex flex-col gap-3.5">
           <PumpControl
-            state={state}
-            mode="AUTO"
+            state={busy ? "pending" : state}
+            mode={initialMode}
             relayOn={relayOn}
-            onToggle={() => setRelayOn((v) => !v)}
+            onToggle={handleToggle}
           />
 
           <Card variant="compact" className="grid grid-cols-[repeat(auto-fit,minmax(130px,1fr))] gap-3.5">
-            <MetricReadout label="Air temp" value={isUnknown ? "—" : "26.5"} unit={isUnknown ? "" : "°C"} />
-            <MetricReadout label="Humidity" value={isUnknown ? "—" : "61"} unit={isUnknown ? "" : "%"} />
-            <MetricReadout label="Light" value={isUnknown ? "—" : "820"} unit={isUnknown ? "" : " lx"} />
-            <MetricReadout label="Battery" value={isUnknown ? "3.4" : "3.9"} unit="V" />
+            <MetricReadout
+              label="Air temp"
+              value={isUnknown || initialMetrics.tempC === null ? "—" : initialMetrics.tempC}
+              unit={isUnknown || initialMetrics.tempC === null ? "" : "°C"}
+            />
+            <MetricReadout
+              label="Humidity"
+              value={isUnknown || initialMetrics.humidityPct === null ? "—" : initialMetrics.humidityPct}
+              unit={isUnknown || initialMetrics.humidityPct === null ? "" : "%"}
+            />
+            <MetricReadout
+              label="Light"
+              value={isUnknown || initialMetrics.lightLux === null ? "—" : initialMetrics.lightLux}
+              unit={isUnknown || initialMetrics.lightLux === null ? "" : " lx"}
+            />
+            <MetricReadout
+              label="Battery"
+              value={initialMetrics.batteryV ?? "—"}
+              unit={initialMetrics.batteryV !== null ? "V" : ""}
+            />
           </Card>
         </div>
       </div>

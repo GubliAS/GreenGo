@@ -16,11 +16,36 @@ export function ProvisionDeviceFlow() {
   const [mac, setMac] = useState("");
   const [label, setLabel] = useState("");
   const [copied, setCopied] = useState(false);
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [deviceId, setDeviceId] = useState("");
+  const [claimCode, setClaimCode] = useState("");
+  const [apiKey, setApiKey] = useState("");
 
   const ready = mac.trim().length > 0 && label.trim().length > 0;
-  const deviceId = "dev_8a2f1c9e4b7d";
-  const claimCode = "GG-9K21-P4";
-  const apiKey = "ggk_e3f7a2c8b1d6e4f9a2c8b1e6d3f7a2c8";
+
+  async function handleGenerate() {
+    setError("");
+    setBusy(true);
+    try {
+      const res = await fetch("/api/admin/devices/provision", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mac, label }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.ok) {
+        setError(data.error || "Could not provision this device.");
+        return;
+      }
+      setDeviceId(data.deviceId);
+      setClaimCode(data.claimCode);
+      setApiKey(data.apiKey);
+      setStep("generated");
+    } finally {
+      setBusy(false);
+    }
+  }
 
   return (
     <div className="max-w-form-sm mx-auto">
@@ -52,13 +77,19 @@ export function ProvisionDeviceFlow() {
             sticker or a secure note before continuing.
           </AlertBanner>
 
+          {error && (
+            <div className="text-sm text-danger font-semibold" role="alert">
+              {error}
+            </div>
+          )}
+
           <Button
             variant="primary"
             size="md"
-            disabled={!ready}
-            onClick={() => setStep("generated")}
+            disabled={!ready || busy}
+            onClick={handleGenerate}
           >
-            Generate device credentials
+            {busy ? "Generating…" : "Generate device credentials"}
           </Button>
         </Card>
       )}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Card, BackLink, PageTitle } from "../ui/Card";
 import { Button, ButtonLink } from "../ui/Button";
 import { SuccessPanel } from "../ui/Feedback";
@@ -9,26 +9,53 @@ import type { ClaimCodeState } from "@/lib/types";
 
 /* Add a device → /devices/add · source: GreenGo Add Device.dc.html
  * Spec: handoff/tenant.md §5. Claim code only, no account fields — for an
- * already-authenticated user. Different prototype code from Login:
- * GG-9K21-P4 is valid here (GG-4F82-K1 is already claimed in this scenario). */
-
-const CODE_MAP: Record<string, ClaimCodeState> = {
-  "GG-9K21-P4": "valid",
-  "GG-1111-11": "claimed",
-  "GG-2222-22": "expired",
-};
-
-function checkCode(code: string): ClaimCodeState | null {
-  const c = code.trim().toUpperCase();
-  if (!c) return null;
-  return CODE_MAP[c] ?? "invalid";
-}
+ * already-authenticated user. Phase 4B: wired to GET /api/auth/claim-code
+ * (real lookup) and POST /api/auth/claim-device (real, session-scoped,
+ * atomic redemption). */
 
 export function AddDeviceFlow() {
   const [step, setStep] = useState<"form" | "success">("form");
-  const [codeInput, setCodeInput] = useState("GG-9K21-P4");
+  const [codeInput, setCodeInput] = useState("");
+  const [status, setStatus] = useState<ClaimCodeState | null>(null);
+  const [deviceLabel, setDeviceLabel] = useState("Your greenhouse");
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
 
-  const status = checkCode(codeInput);
+  useEffect(() => {
+    const code = codeInput.trim();
+    if (!code) {
+      setStatus(null);
+      return;
+    }
+    const handle = setTimeout(() => {
+      fetch(`/api/auth/claim-code?code=${encodeURIComponent(code)}`)
+        .then((r) => r.json())
+        .then((data) => setStatus(data.status))
+        .catch(() => setStatus(null));
+    }, 300);
+    return () => clearTimeout(handle);
+  }, [codeInput]);
+
+  async function handleSubmit() {
+    setError("");
+    setBusy(true);
+    try {
+      const res = await fetch("/api/auth/claim-device", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: codeInput }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.ok) {
+        setError(data.error || "Could not claim this device.");
+        return;
+      }
+      setDeviceLabel(data.deviceLabel || "Your greenhouse");
+      setStep("success");
+    } finally {
+      setBusy(false);
+    }
+  }
 
   if (step === "success") {
     return (
@@ -37,7 +64,7 @@ export function AddDeviceFlow() {
           size="lg"
           headingLevel="h2"
           title="Device added"
-          body="Greenhouse 2 is linked to your account. Calibration starts next."
+          body={`${deviceLabel} is linked to your account. Calibration starts next.`}
           action={
             <ButtonLink href="/devices" variant="primary" size="sm">
               Go to your devices
@@ -57,25 +84,20 @@ export function AddDeviceFlow() {
       </p>
 
       <Card className="flex flex-col gap-2.5">
-        <ClaimCodeField
-          value={codeInput}
-          onChange={setCodeInput}
-          state={status}
-          hint={
-            <div className="text-label leading-normal text-faint">
-              Prototype codes — GG-9K21-P4 valid · GG-1111-11 already claimed ·
-              GG-2222-22 expired · anything else not recognised.
-            </div>
-          }
-        />
+        <ClaimCodeField value={codeInput} onChange={setCodeInput} state={status} />
+        {error && (
+          <div className="text-sm text-danger font-semibold" role="alert">
+            {error}
+          </div>
+        )}
         <Button
           variant="primary"
           size="md"
-          disabled={status !== "valid"}
+          disabled={status !== "valid" || busy}
           className="mt-1"
-          onClick={() => setStep("success")}
+          onClick={handleSubmit}
         >
-          Add device
+          {busy ? "Adding device…" : "Add device"}
         </Button>
       </Card>
     </>

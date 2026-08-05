@@ -13,6 +13,21 @@ datasource db {
   provider = "postgresql"
 }
 
+/// Progressive login delay + no-enumeration: keyed by the RAW submitted
+/// identifier (phone or email), not by a User id — so a login attempt
+/// against a phone number that doesn't exist yet accumulates a delay
+/// identically to one that does. Without this, timing itself would leak
+/// which phone numbers have accounts. Lives outside the Tenant/User
+/// relational graph on purpose; see lib/auth.ts.
+model LoginAttempt {
+  id            String   @id @default(cuid())
+  identifier    String   @unique
+  attempts      Int      @default(0)
+  lastAttemptAt DateTime @default(now())
+
+  @@map("login_attempts")
+}
+
 // ─────────────────────────────────────────────────────────────────────────
 // Tenants & users
 // ─────────────────────────────────────────────────────────────────────────

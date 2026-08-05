@@ -7,6 +7,7 @@ import { Hamburger } from "../icons";
 import { StatusPill } from "../ui/StatusPill";
 import { PillToggle } from "../ui/SegmentedControl";
 import { Avatar } from "./AppTopBar";
+import { LogoutLink } from "../auth/LogoutLink";
 import type { AdminRole } from "@/lib/types";
 
 /* Admin top bar. The handoff has two variants of the right-hand side:
@@ -154,12 +155,7 @@ export function AdminTopBar({
           >
             Audit log
           </Link>
-          <Link
-            href="/"
-            className="rounded-nav text-md text-danger hover:bg-danger-bg px-3.5 py-2.75 font-semibold"
-          >
-            Log out
-          </Link>
+          <LogoutLink className="rounded-nav text-md text-danger hover:bg-danger-bg px-3.5 py-2.75 font-semibold" />
         </div>
       )}
     </>
@@ -233,13 +229,10 @@ export function ProfileMenu({
           >
             Audit log
           </Link>
-          <Link
+          <LogoutLink
             role="menuitem"
-            href="/"
-            className="rounded-sm text-sm text-danger hover:bg-danger-bg block px-2.5 py-2"
-          >
-            Log out
-          </Link>
+            className="rounded-sm text-sm text-danger hover:bg-danger-bg px-2.5 py-2"
+          />
         </div>
       )}
     </div>

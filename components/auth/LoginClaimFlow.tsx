@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { SlidingTabs } from "../ui/SegmentedControl";
 import { FormField, Label } from "../ui/FormField";
-import { Button, ButtonLink } from "../ui/Button";
+import { Button } from "../ui/Button";
 import { SuccessPanel } from "../ui/Feedback";
 import { ClaimCodeField } from "../device/ClaimCodeField";
 import type { ClaimCodeState } from "@/lib/types";
@@ -13,40 +14,61 @@ import type { ClaimCodeState } from "@/lib/types";
  * 9 reachable states, all in this one client component per the handoff's
  * single-file structure (spec: handoff/auth.md §1). Copy verbatim.
  *
- * Prototype claim-code map, ported from the handoff:
- *   GG-4F82-K1 -> valid · GG-1111-11 -> claimed · GG-2222-22 -> expired
- *   anything else -> invalid · empty -> null (no feedback shown)
- * Replaced by a real claim-code lookup in Phase 4B. */
-
-const CODE_MAP: Record<string, ClaimCodeState> = {
-  "GG-4F82-K1": "valid",
-  "GG-1111-11": "claimed",
-  "GG-2222-22": "expired",
-};
-
-function checkCode(code: string): ClaimCodeState | null {
-  const c = code.trim().toUpperCase();
-  if (!c) return null;
-  return CODE_MAP[c] ?? "invalid";
-}
+ * Phase 4B: wired to real endpoints. Claim-code status comes from
+ * GET /api/auth/claim-code (debounced), login from POST /api/auth/login,
+ * and account creation from POST /api/auth/register. OTP verification
+ * itself stays client-side (1234/9999) — see DEVIATIONS.md; the account
+ * this creates is real, session-backed, and its phone number is genuinely
+ * checked for uniqueness server-side regardless of the OTP step's fidelity.
+ */
 
 type Mode = "login" | "claim";
 type ClaimStep = "code" | "details" | "otp" | "success";
 
 export function LoginClaimFlow() {
+  const router = useRouter();
   const [mode, setMode] = useState<Mode>("login");
   const [claimStep, setClaimStep] = useState<ClaimStep>("code");
 
-  const [codeInput, setCodeInput] = useState("GG-4F82-K1");
-  const [phoneInput, setPhoneInput] = useState("0244 123 456");
+  // Login tab
+  const [loginPhone, setLoginPhone] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
+  const [loginError, setLoginError] = useState("");
+  const [loginBusy, setLoginBusy] = useState(false);
+
+  // Claim tab
+  const [codeInput, setCodeInput] = useState("");
+  const [codeStatus, setCodeStatus] = useState<ClaimCodeState | null>(null);
+  const [nameInput, setNameInput] = useState("");
+  const [phoneInput, setPhoneInput] = useState("");
+  const [passwordInput, setPasswordInput] = useState("");
   const [otpInput, setOtpInput] = useState("");
   const [otpError, setOtpError] = useState("");
+  const [registerError, setRegisterError] = useState("");
+  const [registerBusy, setRegisterBusy] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
   const resendTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [deviceLabel, setDeviceLabel] = useState("your device");
 
   useEffect(() => () => {
     if (resendTimer.current) clearInterval(resendTimer.current);
   }, []);
+
+  // Debounced real claim-code lookup, replacing the Phase 2 hardcoded map.
+  useEffect(() => {
+    const code = codeInput.trim();
+    if (!code) {
+      setCodeStatus(null);
+      return;
+    }
+    const handle = setTimeout(() => {
+      fetch(`/api/auth/claim-code?code=${encodeURIComponent(code)}`)
+        .then((r) => r.json())
+        .then((data) => setCodeStatus(data.status))
+        .catch(() => setCodeStatus(null));
+    }, 300);
+    return () => clearTimeout(handle);
+  }, [codeInput]);
 
   const startResendTimer = () => {
     if (resendTimer.current) clearInterval(resendTimer.current);
@@ -61,15 +83,61 @@ export function LoginClaimFlow() {
     }, 1000);
   };
 
-  const markLoggedIn = () => {
+  async function handleLogin() {
+    setLoginError("");
+    setLoginBusy(true);
     try {
-      localStorage.setItem("greengo_logged_in", "1");
-    } catch {
-      /* private browsing — the session cookie in Phase 4B is authoritative. */
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone: loginPhone, password: loginPassword }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.ok) {
+        setLoginError(data.error || "Incorrect phone number or password.");
+        return;
+      }
+      router.push("/devices");
+      router.refresh();
+    } finally {
+      setLoginBusy(false);
     }
-  };
+  }
 
-  const status = checkCode(codeInput);
+  async function handleVerifyOtp() {
+    if (otpInput === "9999") {
+      setOtpError("This code has expired — resend to get a new one.");
+      return;
+    }
+    if (otpInput !== "1234") {
+      setOtpError("Incorrect code — check the SMS and try again.");
+      return;
+    }
+    setOtpError("");
+    setRegisterError("");
+    setRegisterBusy(true);
+    try {
+      const res = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          code: codeInput,
+          name: nameInput,
+          phone: phoneInput,
+          password: passwordInput,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.ok) {
+        setOtpError(data.error || "Could not create your account.");
+        return;
+      }
+      setDeviceLabel(data.deviceLabel || "your device");
+      setClaimStep("success");
+    } finally {
+      setRegisterBusy(false);
+    }
+  }
 
   return (
     <>
@@ -105,6 +173,8 @@ export function LoginClaimFlow() {
                   placeholder="0244 123 456"
                   size="lg"
                   name="phone"
+                  value={loginPhone}
+                  onChange={(e) => setLoginPhone(e.target.value)}
                 />
               </div>
               <FormField
@@ -113,19 +183,22 @@ export function LoginClaimFlow() {
                 placeholder="••••••••"
                 size="lg"
                 name="password"
+                value={loginPassword}
+                onChange={(e) => setLoginPassword(e.target.value)}
+                error={loginError || undefined}
               />
               <Link href="/forgot-password" className="text-sm self-end font-semibold">
                 Forgot password?
               </Link>
-              <ButtonLink
-                href="/devices"
+              <Button
                 variant="primary"
                 size="md"
-                className="mt-1 text-center"
-                onClick={markLoggedIn}
+                className="mt-1"
+                disabled={loginBusy || !loginPhone || !loginPassword}
+                onClick={handleLogin}
               >
-                Log in
-              </ButtonLink>
+                {loginBusy ? "Logging in…" : "Log in"}
+              </Button>
             </div>
           </div>
         )}
@@ -140,22 +213,11 @@ export function LoginClaimFlow() {
               enclosure, or on your setup card.
             </p>
             <div className="flex flex-col gap-2.5">
-              <ClaimCodeField
-                value={codeInput}
-                onChange={setCodeInput}
-                state={status}
-                hint={
-                  <div className="text-label leading-normal text-faint">
-                    Prototype codes — GG-4F82-K1 valid · GG-1111-11 already
-                    claimed · GG-2222-22 expired · anything else not
-                    recognised.
-                  </div>
-                }
-              />
+              <ClaimCodeField value={codeInput} onChange={setCodeInput} state={codeStatus} />
               <Button
                 variant="primary"
                 size="md"
-                disabled={status !== "valid"}
+                disabled={codeStatus !== "valid"}
                 className="mt-1"
                 onClick={() => setClaimStep("details")}
               >
@@ -187,7 +249,14 @@ export function LoginClaimFlow() {
               </button>
             </div>
             <div className="flex flex-col gap-4">
-              <FormField label="Your name" placeholder="Full name" size="lg" name="name" />
+              <FormField
+                label="Your name"
+                placeholder="Full name"
+                size="lg"
+                name="name"
+                value={nameInput}
+                onChange={(e) => setNameInput(e.target.value)}
+              />
               <FormField
                 label="Phone number"
                 type="tel"
@@ -204,11 +273,14 @@ export function LoginClaimFlow() {
                 placeholder="At least 8 characters"
                 size="lg"
                 name="password"
+                value={passwordInput}
+                onChange={(e) => setPasswordInput(e.target.value)}
               />
               <Button
                 variant="primary"
                 size="md"
                 className="mt-1"
+                disabled={!nameInput || !phoneInput || passwordInput.length < 8}
                 onClick={() => {
                   setOtpInput("");
                   setOtpError("");
@@ -257,31 +329,18 @@ export function LoginClaimFlow() {
                   otpError ? "border-danger-border" : "border-line"
                 }`}
               />
-              {otpError && (
+              {(otpError || registerError) && (
                 <div className="text-sm text-danger font-semibold" role="alert">
-                  {otpError}
+                  {otpError || registerError}
                 </div>
               )}
               <Button
                 variant="primary"
                 size="md"
-                disabled={otpInput.length !== 4}
-                onClick={() => {
-                  if (otpInput === "1234") {
-                    markLoggedIn();
-                    setClaimStep("success");
-                  } else if (otpInput === "9999") {
-                    setOtpError(
-                      "This code has expired — resend to get a new one.",
-                    );
-                  } else {
-                    setOtpError(
-                      "Incorrect code — check the SMS and try again.",
-                    );
-                  }
-                }}
+                disabled={otpInput.length !== 4 || registerBusy}
+                onClick={handleVerifyOtp}
               >
-                Verify &amp; create account
+                {registerBusy ? "Creating account…" : "Verify & create account"}
               </Button>
               <div className="text-sm text-muted">
                 {resendCooldown > 0 ? (
@@ -318,11 +377,11 @@ export function LoginClaimFlow() {
         {mode === "claim" && claimStep === "success" && (
           <SuccessPanel
             title="Phone verified — account created"
-            body="Greenhouse 1 is linked to your account. Calibration starts next."
+            body={`${deviceLabel} is linked to your account. Calibration starts next.`}
             action={
-              <ButtonLink href="/devices" variant="primary" size="md">
+              <Button variant="primary" size="md" onClick={() => router.push("/devices")}>
                 Go to your dashboard
-              </ButtonLink>
+              </Button>
             }
           />
         )}

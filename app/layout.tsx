@@ -6,6 +6,7 @@ import {
   IBM_Plex_Mono,
 } from "next/font/google";
 import "./globals.css";
+import { ToastProvider } from "@/components/ui/Toast";
 
 /* Fonts are self-hosted by next/font at build time — no render-blocking
  * request to fonts.googleapis.com. The handoff loaded all four from the CDN;
@@ -53,7 +54,7 @@ export default function RootLayout({
       <body
         className={`${bricolage.variable} ${newsreader.variable} ${publicSans.variable} ${plexMono.variable}`}
       >
-        {children}
+        <ToastProvider>{children}</ToastProvider>
       </body>
     </html>
   );

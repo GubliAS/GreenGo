@@ -4,49 +4,84 @@ import { AdminTopBar } from "@/components/nav/AdminTopBar";
 import { PageTitle, Card, CardTitle } from "@/components/ui/Card";
 import { StatCard } from "@/components/ui/StatCard";
 import { SegmentedBar } from "@/components/ui/SegmentedBar";
+import { db } from "@/lib/db";
 
 /* Fleet overview → /admin · source: GreenGo Admin Fleet Overview.dc.html
- * Spec: handoff/admin.md §1. Copy verbatim. */
+ * Spec: handoff/admin.md §1. Copy verbatim.
+ *
+ * Not tenant-scoped — this is the fleet-wide admin view, so it reads across
+ * all devices/tenants deliberately (unlike every tenant-facing page, which
+ * must never do this). */
 
 export const metadata: Metadata = { title: "Fleet overview — GreenGo Admin" };
+// Reads the fleet live — every device/reading/alert/audit row is
+// request-time state, not something a build-time prerender could ever see.
+export const dynamic = "force-dynamic";
 
-const COUNTS = [
-  { value: "1", label: "Total devices", tone: "text-canopy" },
-  { value: "1", label: "Online", tone: "text-leaf" },
-  { value: "0", label: "Offline", tone: "text-faint" },
-  { value: "0", label: "Never reported", tone: "text-faint" },
-  { value: "1", label: "Unclaimed", tone: "text-warn-text" },
-  { value: "0", label: "Alerting now", tone: "text-faint" },
-];
+const STALE_AFTER_SECONDS = Number(process.env.DEVICE_STALE_AFTER_SECONDS ?? 120);
 
-const ACTIVITY: { dot: string; actor: string; text: string; time: string }[] = [
-  {
-    dot: "bg-leaf",
-    actor: "Kwame Asante",
-    text: 'claimed device GG-4F82-K1 as "Greenhouse 1"',
-    time: "2 months ago · 09:14 GMT",
-  },
-  {
-    dot: "bg-canopy",
-    actor: "Greenhouse 1",
-    text: "pump command confirmed (AUTO, 4m 20s)",
-    time: "Today · 06:14 GMT",
-  },
-  {
-    dot: "bg-warn",
-    actor: "Greenhouse 1",
-    text: "soil alert sent — 24% (below 30% threshold)",
-    time: "Yesterday · 21:02 GMT",
-  },
-  {
-    dot: "bg-danger",
-    actor: "Unknown",
-    text: "failed login attempt for +233 24 XXX XX01",
-    time: "3 days ago · 14:47 GMT",
-  },
-];
+const ACTIVITY_DOT: Record<string, string> = {
+  DEVICE_CLAIMED: "bg-leaf",
+  DEVICE_PROVISIONED: "bg-leaf",
+  COMMAND_ISSUED: "bg-canopy",
+  LOGIN_FAILURE: "bg-danger",
+  DEVICE_UNCLAIMED: "bg-warn",
+  API_KEY_REGENERATED: "bg-warn",
+};
 
-export default function AdminFleetPage() {
+export default async function AdminFleetPage() {
+  const devices = await db.device.findMany();
+  const now = Date.now();
+
+  const total = devices.length;
+  const unclaimed = devices.filter((d) => !d.tenantId).length;
+  const neverReported = devices.filter((d) => !d.lastSeenAt).length;
+  const online = devices.filter(
+    (d) => d.lastSeenAt && now - d.lastSeenAt.getTime() <= STALE_AFTER_SECONDS * 1000,
+  ).length;
+  const offline = total - online - neverReported;
+
+  const openAlerts = await db.alert.count({ where: { clearedAt: null } });
+
+  const mostRecentDevice = devices
+    .filter((d) => d.lastSeenAt)
+    .sort((a, b) => (b.lastSeenAt?.getTime() ?? 0) - (a.lastSeenAt?.getTime() ?? 0))[0];
+  const liveReading = mostRecentDevice
+    ? await db.reading.findFirst({
+        where: { deviceId: mostRecentDevice.id },
+        orderBy: { recordedAt: "desc" },
+      })
+    : null;
+
+  const activity = await db.auditEntry.findMany({
+    orderBy: { createdAt: "desc" },
+    take: 4,
+  });
+
+  const smsToday = await db.smsMessage.aggregate({
+    where: {
+      queuedAt: { gte: new Date(new Date().setUTCHours(0, 0, 0, 0)) },
+      status: { in: ["SENT", "DELIVERED"] },
+    },
+    _sum: { costMinor: true },
+  });
+  const smsThisMonth = await db.smsMessage.aggregate({
+    where: {
+      queuedAt: { gte: new Date(new Date().setUTCDate(1)) },
+      status: { in: ["SENT", "DELIVERED"] },
+    },
+    _sum: { costMinor: true },
+  });
+
+  const counts = [
+    { value: String(total), label: "Total devices", tone: "text-canopy" },
+    { value: String(online), label: "Online", tone: online > 0 ? "text-leaf" : "text-faint" },
+    { value: String(offline), label: "Offline", tone: offline > 0 ? "text-warn-text" : "text-faint" },
+    { value: String(neverReported), label: "Never reported", tone: "text-faint" },
+    { value: String(unclaimed), label: "Unclaimed", tone: unclaimed > 0 ? "text-warn-text" : "text-faint" },
+    { value: String(openAlerts), label: "Alerting now", tone: openAlerts > 0 ? "text-danger" : "text-faint" },
+  ];
+
   return (
     <div className="min-h-screen">
       <AdminTopBar active="fleet" />
@@ -54,41 +89,57 @@ export default function AdminFleetPage() {
         <PageTitle>Fleet overview</PageTitle>
 
         <div className="grid grid-cols-[repeat(auto-fit,minmax(120px,1fr))] gap-3">
-          {COUNTS.map((c) => (
+          {counts.map((c) => (
             <StatCard key={c.label} value={c.value} label={c.label} valueClassName={c.tone} />
           ))}
         </div>
 
-        <div className="bg-canopy rounded-card flex flex-wrap items-center justify-between gap-6 p-6">
-          <div>
-            <div className="font-mono text-micro tracking-caps mb-2 uppercase text-white/60">
-              Greenhouse 1 · live from the fleet
+        {mostRecentDevice && liveReading && (
+          <div className="bg-canopy rounded-card flex flex-wrap items-center justify-between gap-6 p-6">
+            <div>
+              <div className="font-mono text-micro tracking-caps mb-2 uppercase text-white/60">
+                {mostRecentDevice.label ?? mostRecentDevice.mac} · live from the fleet
+              </div>
+              <div className="flex items-baseline gap-2.5">
+                <div className="font-mono text-36 font-semibold text-white">
+                  {liveReading.soilPct ?? "—"}%
+                </div>
+                <div className="text-sm text-white/75">
+                  soil moisture · updated{" "}
+                  {mostRecentDevice.lastSeenAt ? relativeSeconds(mostRecentDevice.lastSeenAt) : "—"} ago
+                </div>
+              </div>
             </div>
-            <div className="flex items-baseline gap-2.5">
-              <div className="font-mono text-36 font-semibold text-white">38%</div>
-              <div className="text-sm text-white/75">soil moisture · updated 8s ago</div>
+            <div className="max-w-105 min-w-55 flex-1">
+              <SegmentedBar
+                percent={liveReading.soilPct ?? 0}
+                count={24}
+                height={32}
+                surface="dark"
+                radius="sm"
+              />
             </div>
           </div>
-          <div className="max-w-105 min-w-55 flex-1">
-            <SegmentedBar percent={38} count={24} height={32} surface="dark" radius="sm" />
-          </div>
-        </div>
+        )}
 
         <div className="grid grid-cols-[repeat(auto-fit,minmax(300px,1fr))] gap-4">
           <Card>
             <CardTitle>Recent activity</CardTitle>
             <div className="mt-4 flex flex-col gap-3.5">
-              {ACTIVITY.map((a) => (
-                <div key={a.text} className="flex items-start gap-3">
+              {activity.length === 0 && (
+                <div className="text-meta text-muted">No activity yet.</div>
+              )}
+              {activity.map((a) => (
+                <div key={a.id} className="flex items-start gap-3">
                   <span
-                    className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${a.dot}`}
+                    className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${ACTIVITY_DOT[a.action] ?? "bg-muted"}`}
                     aria-hidden="true"
                   />
                   <div className="flex-1">
                     <div className="text-body text-canopy">
-                      <strong>{a.actor}</strong> {a.text}
+                      <strong>{a.actorName}</strong> {a.details}
                     </div>
-                    <div className="text-label text-muted mt-0.5">{a.time}</div>
+                    <div className="text-label text-muted mt-0.5">{relativeSeconds(a.createdAt)} ago</div>
                   </div>
                 </div>
               ))}
@@ -108,13 +159,13 @@ export default function AdminFleetPage() {
                 <div className="flex justify-between">
                   <span className="text-sm text-muted">Today</span>
                   <span className="font-mono text-lg text-canopy font-semibold">
-                    GHS 0.60
+                    {formatGhs(smsToday._sum.costMinor ?? 0)}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm text-muted">This month</span>
                   <span className="font-mono text-lg text-canopy font-semibold">
-                    GHS 8.40
+                    {formatGhs(smsThisMonth._sum.costMinor ?? 0)}
                   </span>
                 </div>
               </div>
@@ -127,7 +178,7 @@ export default function AdminFleetPage() {
                 Fleet is small on purpose
               </div>
               <div className="text-meta text-ink leading-body">
-                One claimed device, one unclaimed unit awaiting provisioning.
+                {total} device{total === 1 ? "" : "s"} total, {unclaimed} awaiting provisioning.
                 Every number above is exact, not a placeholder.
               </div>
             </div>
@@ -136,4 +187,19 @@ export default function AdminFleetPage() {
       </div>
     </div>
   );
+}
+
+function formatGhs(minor: number): string {
+  return `GHS ${(minor / 100).toFixed(2)}`;
+}
+
+function relativeSeconds(date: Date): string {
+  const seconds = Math.max(0, Math.round((Date.now() - date.getTime()) / 1000));
+  if (seconds < 60) return `${seconds}s`;
+  const minutes = Math.round(seconds / 60);
+  if (minutes < 60) return `${minutes}m`;
+  const hours = Math.round(minutes / 60);
+  if (hours < 24) return `${hours}h`;
+  const days = Math.round(hours / 24);
+  return `${days}d`;
 }
