@@ -270,6 +270,24 @@ Reasoning: stone reads as "inert/neutral" (already used for MANUAL and other non
 
 ---
 
+## Phase 3 note — migration verified offline, not against a live database
+
+**Status:** informational, not a deviation
+**Type:** verification method disclosure
+
+Per ruling #7, no local Postgres was provisioned for this project — you're supplying `DATABASE_URL`. Docker Desktop was available on this machine but its daemon did not come up within a reasonable wait, so the schema could not be verified against a live database in this session either.
+
+What WAS verified, and how:
+- `prisma validate` — schema is syntactically and relationally valid
+- `prisma generate` — the full Prisma Client generated successfully against the schema (this alone catches most relation/field errors)
+- `prisma migrate diff --from-empty --to-schema` — generated the actual `CREATE TABLE`/`CREATE INDEX`/`ALTER TABLE ... ADD CONSTRAINT` SQL the schema engine would run, entirely offline (no DB connection needed for a diff against an empty baseline). Read line-by-line: both `@@index([deviceId, recordedAt(sort: Desc)])`-style indexes the brief requires are present as `DESC`-ordered composite indexes; every FK and unique constraint matches intent.
+- `tsc --noEmit` on `prisma/seed.ts` against the **real generated Prisma types** — every field name, relation name, and enum value used in the seed script is checked against the actual schema, not assumed.
+- The soil-moisture timeline generator was extracted and run standalone (no DB) across multiple random seeds. This caught two real bugs before they ever reached a database: the pump-rise rate was too small to ever reach saturation (soil oscillated 30–40% forever), and the fixed-index MANUAL-rejection window missed its target entirely (0 failed cycles in every run). Both are described in `prisma/seed.ts`'s doc comment on `buildSoilTimeline`.
+
+What was **not** verified: an actual `prisma migrate dev` / `db:seed` run against a running Postgres. Run `npm run db:migrate && npm run db:seed` once `DATABASE_URL` is set — the migration is pre-generated at `prisma/migrations/20260805000000_init/`, so `migrate dev` should apply it directly rather than recomputing a diff.
+
+---
+
 ## Pending — no ruling needed yet
 
 DEV-010 awaits your decision. Items discovered during later phases will be appended here with `PENDING` status and raised at the next checkpoint.

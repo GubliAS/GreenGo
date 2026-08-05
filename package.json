@@ -17,13 +17,19 @@
     "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
+    "@prisma/adapter-pg": "^7.9.1",
+    "@prisma/client": "^7.9.1",
+    "argon2": "^0.45.1",
     "next": "16.2.12",
+    "pg": "^8.22.0",
+    "prisma": "^7.9.1",
     "react": "19.2.0",
     "react-dom": "19.2.0"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "4.3.3",
     "@types/node": "24.10.1",
+    "@types/pg": "^8.20.4",
     "@types/react": "19.2.7",
     "@types/react-dom": "19.2.4",
     "playwright": "^1.62.1",

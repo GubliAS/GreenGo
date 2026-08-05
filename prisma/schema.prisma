@@ -1,0 +1,374 @@
+// GreenGo — Phase 3 data layer.
+// Mirrors lib/types.ts. Multi-tenant: every tenant-scoped table carries
+// tenantId, and Phase 4's query layer reads it ONLY from the session, never
+// from a request parameter — see lib/db.ts for the enforcement helper.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// Prisma 7: the connection URL lives in prisma.config.ts, not here — a
+// datasource.url in this file is rejected by `prisma validate`.
+datasource db {
+  provider = "postgresql"
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Tenants & users
+// ─────────────────────────────────────────────────────────────────────────
+
+model Tenant {
+  id        String   @id @default(cuid())
+  name      String
+  phoneE164 String   @unique
+  email     String?
+  createdAt DateTime @default(now())
+
+  users        User[]
+  devices      Device[]
+  alertRules   AlertRule[]
+  alerts       Alert[]
+  smsMessages  SmsMessage[]
+  auditEntries AuditEntry[]
+  commands     Command[]
+  claimedCodes ClaimCode[]
+
+  @@map("tenants")
+}
+
+enum Role {
+  TENANT
+  SUPPORT
+  SUPER_ADMIN
+}
+
+model User {
+  id              String    @id @default(cuid())
+  tenantId        String?
+  tenant          Tenant?   @relation(fields: [tenantId], references: [id])
+  name            String
+  phoneE164       String    @unique
+  email           String?
+  passwordHash    String
+  role            Role      @default(TENANT)
+  phoneVerifiedAt DateTime?
+  createdAt       DateTime  @default(now())
+
+  auditEntries   AuditEntry[]
+  commandsIssued Command[]     @relation("CommandActorUser")
+  calibrations   Calibration[]
+
+  @@index([tenantId])
+  @@map("users")
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Devices
+// ─────────────────────────────────────────────────────────────────────────
+
+enum PumpMode {
+  AUTO
+  MANUAL
+}
+
+model Device {
+  id            String    @id @default(cuid())
+  /// Immutable hardware identity. Never reassigned.
+  mac           String    @unique
+  label         String?
+  tenantId      String?
+  tenant        Tenant?   @relation(fields: [tenantId], references: [id])
+  /// Argon2id hash of the device API key. The plaintext is returned to the
+  /// admin exactly once, at provisioning time, and never stored.
+  apiKeyHash    String
+  firmware      String    @default("v1.4.2")
+  disabled      Boolean   @default(false)
+  lastSeenAt    DateTime?
+  signalDbm     Int?
+  batteryV      Float?
+  uptimeSeconds Int?
+  mode          PumpMode  @default(AUTO)
+  relayOn       Boolean   @default(false)
+  claimedAt     DateTime?
+  createdAt     DateTime  @default(now())
+
+  readings         Reading[]
+  commands         Command[]
+  calibration      Calibration?
+  alertRules       AlertRule[]
+  alerts           Alert[]
+  smsMessages      SmsMessage[]
+  auditEntries     AuditEntry[]
+  claimCodes       ClaimCode[]
+  irrigationEvents IrrigationEvent[]
+  smsRecipients    SmsRecipient[]
+
+  @@map("devices")
+}
+
+/// Single-use, time-limited. Consumption is atomic (see lib/db.ts
+/// redeemClaimCode) — a code can be marked consumed exactly once.
+model ClaimCode {
+  id                 String    @id @default(cuid())
+  code               String    @unique
+  deviceId           String
+  device             Device    @relation(fields: [deviceId], references: [id])
+  expiresAt          DateTime?
+  consumedAt         DateTime?
+  consumedByTenantId String?
+  consumedByTenant   Tenant?   @relation(fields: [consumedByTenantId], references: [id])
+  createdAt          DateTime  @default(now())
+
+  @@index([deviceId])
+  @@map("claim_codes")
+}
+
+/// Raw values are stored alongside the derived percentage so a bad
+/// calibration is recoverable — see lib/moisture.ts soilRawToPercent.
+model Calibration {
+  id          String   @id @default(cuid())
+  deviceId    String   @unique
+  device      Device   @relation(fields: [deviceId], references: [id])
+  dryRaw      Int
+  wetRaw      Int
+  setByUserId String?
+  setByUser   User?    @relation(fields: [setByUserId], references: [id])
+  setAt       DateTime @default(now())
+
+  @@map("calibrations")
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Telemetry
+// ─────────────────────────────────────────────────────────────────────────
+
+model Reading {
+  id          String   @id @default(cuid())
+  deviceId    String
+  device      Device   @relation(fields: [deviceId], references: [id])
+  recordedAt  DateTime @default(now())
+  /// Raw ADC value from the resistive bridge — source of truth.
+  soilRaw     Int
+  /// Derived from soilRaw against the device's calibration at ingest time.
+  /// Null when the device has never been calibrated.
+  soilPct     Int?
+  tempC       Float?
+  humidityPct Float?
+  /// Provisional (LDR). The UI degrades to 3 metrics when null.
+  lightLux    Int?
+  relayOn     Boolean
+  mode        PumpMode
+  signalDbm   Int?
+  batteryV    Float?
+
+  @@index([deviceId, recordedAt(sort: Desc)])
+  @@map("readings")
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Commands & irrigation
+// ─────────────────────────────────────────────────────────────────────────
+
+enum CommandAction {
+  PUMP_ON
+  PUMP_OFF
+}
+
+enum CommandStatus {
+  PENDING
+  SENT
+  CONFIRMED
+  FAILED
+  EXPIRED
+}
+
+enum ActorKind {
+  AUTO
+  USER
+  ADMIN
+}
+
+model Command {
+  id            String        @id @default(cuid())
+  deviceId      String
+  device        Device        @relation(fields: [deviceId], references: [id])
+  tenantId      String?
+  tenant        Tenant?       @relation(fields: [tenantId], references: [id])
+  action        CommandAction
+  status        CommandStatus @default(PENDING)
+  actorKind     ActorKind
+  actorUserId   String?
+  actorUser     User?         @relation("CommandActorUser", fields: [actorUserId], references: [id])
+  /// Denormalised display name at issue time ("AUTO", or the user's name) —
+  /// so history reads correctly even if the user is later renamed/removed.
+  actorName     String
+  maxRunSeconds Int
+  /// Commands not collected by the device within this window are discarded,
+  /// never delivered — see /api/telemetry.
+  expiresAt     DateTime
+  createdAt     DateTime      @default(now())
+  sentAt        DateTime?
+  confirmedAt   DateTime?
+  stopReason    String?
+
+  @@index([deviceId, createdAt(sort: Desc)])
+  @@index([deviceId, status])
+  @@map("commands")
+}
+
+/// One completed irrigation cycle, as the Irrigation Log renders it. Written
+/// when a pump_on/pump_off command pair resolves, rather than derived on
+/// read — the log must stay correct even if commands are later pruned.
+model IrrigationEvent {
+  id              String   @id @default(cuid())
+  deviceId        String
+  device          Device   @relation(fields: [deviceId], references: [id])
+  startedAt       DateTime
+  durationSeconds Int
+  trigger         PumpMode
+  stopReason      String
+
+  @@index([deviceId, startedAt(sort: Desc)])
+  @@map("irrigation_events")
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Alerts
+// ─────────────────────────────────────────────────────────────────────────
+
+enum AlertCondition {
+  SOIL_BELOW
+  TEMP_BELOW
+  TEMP_ABOVE
+  HUMIDITY_BELOW
+  HUMIDITY_ABOVE
+}
+
+/// Fires below `threshold`, clears only above `clearThreshold` — the
+/// hysteresis gap prevents a boundary-hovering reading from flapping.
+model AlertRule {
+  id              String         @id @default(cuid())
+  deviceId        String
+  device          Device         @relation(fields: [deviceId], references: [id])
+  tenantId        String
+  tenant          Tenant         @relation(fields: [tenantId], references: [id])
+  condition       AlertCondition
+  threshold       Float
+  clearThreshold  Float
+  cooldownMinutes Int            @default(60)
+  enabled         Boolean        @default(true)
+
+  alerts Alert[]
+
+  @@unique([deviceId, condition])
+  @@map("alert_rules")
+}
+
+model Alert {
+  id               String         @id @default(cuid())
+  deviceId         String
+  device           Device         @relation(fields: [deviceId], references: [id])
+  tenantId         String
+  tenant           Tenant         @relation(fields: [tenantId], references: [id])
+  ruleId           String
+  rule             AlertRule      @relation(fields: [ruleId], references: [id])
+  condition        AlertCondition
+  value            Float
+  firedAt          DateTime       @default(now())
+  clearedAt        DateTime?
+  notifiedAt       DateTime?
+  /// Set when the alert fired but no SMS was sent — "quiet hours", "daily
+  /// cap reached", "cooldown active".
+  suppressedReason String?
+
+  smsMessages SmsMessage[]
+
+  @@index([deviceId, firedAt(sort: Desc)])
+  @@map("alerts")
+}
+
+model SmsRecipient {
+  id        String  @id @default(cuid())
+  deviceId  String
+  device    Device  @relation(fields: [deviceId], references: [id])
+  phoneE164 String
+  isPrimary Boolean @default(false)
+
+  @@index([deviceId])
+  @@map("sms_recipients")
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// SMS
+// ─────────────────────────────────────────────────────────────────────────
+
+enum SmsStatus {
+  QUEUED
+  SENT
+  DELIVERED
+  FAILED
+  UNDELIVERED
+}
+
+model SmsMessage {
+  id            String    @id @default(cuid())
+  tenantId      String?
+  tenant        Tenant?   @relation(fields: [tenantId], references: [id])
+  deviceId      String?
+  device        Device?   @relation(fields: [deviceId], references: [id])
+  alertId       String?
+  alert         Alert?    @relation(fields: [alertId], references: [id])
+  toPhoneE164   String
+  body          String
+  status        SmsStatus @default(QUEUED)
+  /// Null for the console-logging stub implementation used in this demo.
+  providerRef   String?
+  failureReason String?
+  costMinor     Int?
+  costCurrency  String    @default("GHS")
+  queuedAt      DateTime  @default(now())
+  sentAt        DateTime?
+  deliveredAt   DateTime?
+
+  @@index([tenantId, queuedAt(sort: Desc)])
+  @@map("sms_messages")
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Audit
+// ─────────────────────────────────────────────────────────────────────────
+
+enum AuditAction {
+  LOGIN_SUCCESS
+  LOGIN_FAILURE
+  LOGOUT
+  DEVICE_PROVISIONED
+  DEVICE_CLAIMED
+  DEVICE_UNCLAIMED
+  DEVICE_VIEWED
+  API_KEY_REGENERATED
+  COMMAND_ISSUED
+  CALIBRATION_SET
+  ALERT_RULES_UPDATED
+  PASSWORD_CHANGED
+}
+
+model AuditEntry {
+  id          String      @id @default(cuid())
+  actorUserId String?
+  actorUser   User?       @relation(fields: [actorUserId], references: [id])
+  /// Denormalised — the audit trail must survive the actor being deleted.
+  actorName   String
+  tenantId    String?
+  tenant      Tenant?     @relation(fields: [tenantId], references: [id])
+  deviceId    String?
+  device      Device?     @relation(fields: [deviceId], references: [id])
+  action      AuditAction
+  details     String
+  ip          String?
+  createdAt   DateTime    @default(now())
+
+  @@index([createdAt(sort: Desc)])
+  @@index([tenantId, createdAt(sort: Desc)])
+  @@map("audit_log")
+}
