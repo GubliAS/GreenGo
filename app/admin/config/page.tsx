@@ -17,7 +17,7 @@ function ConfigField({ label, defaultValue }: { label: string; defaultValue: str
       <input
         type="text"
         defaultValue={defaultValue}
-        className="border-hair border-line rounded-input box-border w-24 bg-white px-3 py-2.5 text-base font-mono"
+        className="border-hair border-line rounded-input box-border w-24 bg-white px-3 py-2.75 text-base font-mono"
       />
     </div>
   );
@@ -67,13 +67,13 @@ export default function AdminConfigPage() {
                 <input
                   type="text"
                   defaultValue="9:00 PM"
-                  className="border-hair border-line rounded-input box-border w-27.5 bg-white px-3 py-2.5 text-base"
+                  className="border-hair border-line rounded-input box-border w-27.5 bg-white px-3 py-2.75 text-base"
                 />
                 <span className="text-sm text-muted">to</span>
                 <input
                   type="text"
                   defaultValue="5:30 AM"
-                  className="border-hair border-line rounded-input box-border w-27.5 bg-white px-3 py-2.5 text-base"
+                  className="border-hair border-line rounded-input box-border w-27.5 bg-white px-3 py-2.75 text-base"
                 />
               </div>
             </div>

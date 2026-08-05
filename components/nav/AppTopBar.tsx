@@ -44,8 +44,10 @@ export function AppTopBar({
       <div className="border-hairline px-topbar-x flex items-center gap-7 border-b bg-white py-4">
         <Logo size="app" href="/" />
 
-        {/* Desktop links */}
-        <div className="text-body hidden flex-1 gap-1 whitespace-nowrap nav:flex">
+        {/* Desktop links. min-w-0 + overflow-x-auto restores the handoff's
+            literal spec for this div ("flex:1;overflow-x:auto;white-space:
+            nowrap") — see the matching fix + rationale in MarketingNav.tsx. */}
+        <div className="text-body hidden min-w-0 flex-1 gap-1 overflow-x-auto whitespace-nowrap nav:flex">
           {LINKS.map((l) => (
             <Link
               key={l.id}

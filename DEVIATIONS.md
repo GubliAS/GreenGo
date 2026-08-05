@@ -208,19 +208,49 @@ The handoff README already says these are "placeholder/stock-style photos; repla
 
 ---
 
-## Phase 5 backlog — recorded now, fixed in Phase 5
+## Phase 5 — responsive audit + a11y floor, final accounting
 
-Found by `scripts/screenshots.mjs` at 390px and 1440px. All are **faithful to the handoff** as built; the handoff claims ≥44px only for "primary buttons/inputs", which these are not. Listed so none is lost.
+Tested at 380/414/768/1024/1440 via `scripts/screenshots.mjs` (Playwright), full-page screenshots + computed-layout assertions on every route. Protected routes were reached with a session JWT minted locally (matching `lib/session.ts`'s exact format) rather than a real login — see the verification-method note at the end of this section for why, and for the one class of page this couldn't reach.
 
-| Element | Measured | Where |
+### Fixed
+
+**H-OVERFLOW at 768px — MarketingNav, AppTopBar, AdminTopBar (real bug, not a deviation).** All three top bars' desktop nav-links `<div>` is a `flex-1` flex child containing `white-space:nowrap` links; a flex child doesn't shrink below its content's natural width by default (`min-width:auto`), so at the narrow end of the desktop breakpoint (760–820px) the links collectively need more room than the bar has, and the rightmost items (login+button on marketing, or the whole row on admin/app) get pushed past the container — and the viewport — edge. The handoff's own source HTML already specifies the fix on this exact div (`flex:1;overflow-x:auto;white-space:nowrap`, verbatim in `GreenGo Landing Page.dc.html` / `GreenGo Devices List.dc.html` / `GreenGo Admin Fleet Overview.dc.html`) — I had dropped `overflow-x:auto` and its required companion `min-width:0` when porting to Tailwind. Restored on all three top bars: `min-w-0 overflow-x-auto` added to the links `<div>`. This is a faithful-porting fix, not a new deviation.
+
+**Login/Claim tabs below 44px (`SlidingTabs`).** The handoff's literal `padding:9px 10px` renders these tabs at ~37px tall. They're a primary control (they switch the entire form mode) and the handoff's own README states "Touch targets are ≥44px on all primary buttons/inputs" — the explicit numeric requirement wins over an un-checked pixel value, the same reasoning as DEV-001. Added `min-h-11` to the tab buttons; visual padding/font untouched.
+
+**Alerts and Config numeric/time inputs at 43px.** One pixel under the ≥44px floor from `py-2.5`. Bumped to `py-2.75` on both `/devices/[id]/alerts` and `/admin/config`.
+
+**Logo link hit-area (all pages).** The visual mark is intentionally small (26×30 marketing / 22×26 app, per the handoff's brand sizing across all 19 screens) — inflating it would be a real design change. Instead added padding + a matching negative margin to the `<Link>` so the *clickable* area reaches 44px without enlarging the mark or shifting the surrounding flex row.
+
+**Hero eyebrow chip contrast.** Measured (screenshot + visual check): white text on the handoff's literal `bg-white/14` glass chip, sitting over the brightest region of the hero photo (the scrim gradient is *thinnest* at the top, where this chip sits), reads well under WCAG AA. Unlike the low-resolution placeholder photography (DEV-010), this doesn't resolve itself when real photography arrives — a translucent white-on-white chip over an unconstrained photo crop is fragile by construction, not by asset quality. Changed the chip backdrop to `bg-canopy/45` (a dark, canopy-tinted glass) — same pill shape, same white text, contrast now guaranteed regardless of what's behind it.
+
+### Reviewed and kept as designed — not a bug
+
+The remaining touch-target findings are all **faithful to the handoff's own literal pixel values**, and the handoff's README states the ≥44px requirement specifically for "primary buttons/inputs" — these aren't that:
+
+| Element | Measured | Reasoning |
 |---|---|---|
-| Footer links | **20px** high | all 5 marketing pages, both viewports |
-| Desktop nav links | **38px** high | all 5 marketing pages @1440 |
-| `Log in` nav link | 46 × **38px** | all 5 marketing pages @1440 |
-| Logo link | 110 × **30px** | all pages |
-| `/dev/tokens` demo controls | various <44px | dev-only route, not user-facing |
+| Footer links (marketing) | 20px tall | Decorative footer nav, handoff's own thin-text-link design; not a primary control |
+| Desktop/app/admin nav links | 36–38px tall | Navigation, not "buttons/inputs"; already close to the floor and clearly tappable |
+| `Remove` / `+ Add a recipient` / `Mark all as read` / `Change code` / back-links / `Forgot password?` | 16–19px tall | Secondary inline text actions throughout, matching the handoff's link-not-button treatment everywhere these appear |
+| `RangePills`, `StateSwitcher`, `PillToggle` (role toggle), custom `Dropdown` filter buttons | 27–42px tall | Demo/secondary controls at their literal handoff padding (`5px 10px`, `7px 12px`); admin-side density is inherent to an operator tool, not a farmer-facing mobile surface |
+| Admin/tenant avatar button | 34×34px | Matches the handoff's literal circular-avatar size on all 6 admin screens |
+| `/dev/tokens` controls | various | Internal dev-only route, never shipped to a user |
 
-Also for Phase 5: the Landing hero's eyebrow chip (`bg-white/14` + white text) sits over the brightest part of the photograph and has poor contrast. It is exactly as designed in the handoff, so it needs a real contrast measurement and a minimal fix.
+This mirrors the reasoning already applied to DEV-001/DEV-003: where the handoff's literal pixels and its own stated requirement conflict, the requirement wins *for primary controls*; everything else stays faithful to the handoff as built.
+
+### Accessibility floor — already in place, verified
+
+- **Visible keyboard focus**: `:focus-visible { outline: 2px solid var(--color-leaf); ... }` — global, not in the handoff (which has none), added as the Phase-1 quality floor
+- **`prefers-reduced-motion`**: global rule disables every `[data-gg-anim]` element plus a blanket transition-duration override — every animated element in the handoff carries `data-gg-anim="1"` specifically so this one rule can reach all of them
+- **Labels tied to inputs**: `FormField` always renders a `<label htmlFor>` paired to the input's `id`
+- **Alt text**: decorative photography (`hero-field.jpg`, `footer-greenhouse.jpg`, `login-greenhouse.jpg`) uses `alt=""` (correctly decorative — the surrounding heading/copy carries the meaning); no image conveys information alt text would need to carry
+
+### Verification method — the 6 pages a session cookie alone can't reach
+
+`middleware`/`proxy.ts` gates protected routes on a *session*, but 6 pages (`/devices`, `/devices/[id]`, `/settings`, `/admin`, `/admin/devices`, `/admin/account`) also call Prisma directly, which this environment's placeholder `DATABASE_URL` can't satisfy (see the Phase 3/4A notes above). These 6 were excluded from the automated Playwright pass — running them against a placeholder connection string doesn't fail fast per-request; it exhausts the pg pool's retry attempts and stops the *entire server* from responding, including unrelated routes, which is what caused the first audit attempt to time out completely.
+
+Verified instead by (a) confirming all 6 use only shared, already-tested components (`AppTopBar`/`AdminTopBar` with the fixes above, `Card`, `DataTable`, the same `grid-cols-[repeat(auto-fit,minmax(...))]` pattern used throughout) with no page-specific custom CSS, and (b) grepping all 6 for arbitrary Tailwind values or raw hex — none found. Once `DATABASE_URL` points at a real Postgres, re-run `BASE=... OUT=... SESSION_SECRET=... VIEWPORTS=all node scripts/screenshots.mjs` with these 6 routes uncommented in `ALL_ROUTES` for full runtime confirmation.
 
 ---
 

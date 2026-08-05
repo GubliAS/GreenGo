@@ -10,10 +10,13 @@ import { Button } from "@/components/ui/Button";
 
 export const metadata: Metadata = { title: "Alerts & thresholds — GreenGo" };
 
+// py-2.75, not the handoff's literal py-2.5 (10px): at 10px this renders
+// 43px tall, 1px under the ≥44px primary-input floor the handoff's own
+// README states. Same DEV-001 reasoning — the explicit requirement wins.
 const numberField =
-  "border-hair border-line rounded-input box-border w-full bg-white px-3 py-2.5 text-base font-mono";
+  "border-hair border-line rounded-input box-border w-full bg-white px-3 py-2.75 text-base font-mono";
 const timeField =
-  "border-hair border-line rounded-input box-border w-27.5 bg-white px-3 py-2.5 text-base";
+  "border-hair border-line rounded-input box-border w-27.5 bg-white px-3 py-2.75 text-base";
 
 export default async function AlertsPage({
   params,

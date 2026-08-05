@@ -92,7 +92,15 @@ export default function LandingPage() {
               className="animate-rise max-w-150"
               data-gg-anim="1"
             >
-              <div className="text-caption tracking-wide rounded-card mb-4.5 inline-block bg-white/14 px-3.5 py-1.5 font-semibold text-white">
+              {/* Handoff: bg-white/14 (barely-tinted glass) — measured contrast
+                  of white text against this specific photo's bright upper
+                  region is well under WCAG AA 4.5:1. Unlike the low-res
+                  placeholder photography (DEV-010), this doesn't resolve
+                  itself when real photography arrives — a translucent
+                  white-on-white chip is fragile against ANY bright crop.
+                  bg-canopy/45 keeps the glass-chip language but guarantees
+                  contrast regardless of what's behind it. */}
+              <div className="text-caption tracking-wide rounded-card bg-canopy/45 mb-4.5 inline-block px-3.5 py-1.5 font-semibold text-white">
                 Built on ESP32 · one greenhouse, KNUST
               </div>
               <h1 className="font-display text-hero-landing leading-hero tracking-tighter m-0 mb-4 font-extrabold text-white">

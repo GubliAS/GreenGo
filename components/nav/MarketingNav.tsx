@@ -60,8 +60,14 @@ export function MarketingNav({
       >
         <Logo size="marketing" href="/" />
 
-        {/* Desktop links */}
-        <div className="gap-nav-links text-body text-ink hidden flex-1 justify-center whitespace-nowrap nav:flex">
+        {/* Desktop links. min-w-0 + overflow-x-auto restores the handoff's own
+            literal spec for this div ("flex:1;...;overflow-x:auto;white-space:
+            nowrap") — without min-w-0 a flex child won't shrink below its
+            content's natural width, so right at the 760-820px band (just
+            above the mobile cutoff) the nav-links + login + button collectively
+            need more room than the pill has, and the rightmost items get
+            pushed past the viewport edge instead of scrolling internally. */}
+        <div className="gap-nav-links text-body text-ink hidden min-w-0 flex-1 justify-center overflow-x-auto whitespace-nowrap nav:flex">
           {LINKS.map((l) => (
             <Link
               key={l.href}

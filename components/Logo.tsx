@@ -50,11 +50,18 @@ export function Logo({
     );
   }
 
+  // The visual mark is intentionally small (26x30 / 22x26, per the handoff's
+  // brand sizing on all 19 screens) — padding + a matching negative margin
+  // grows the LINK's clickable area to the 44px floor without enlarging the
+  // mark itself or shifting surrounding layout (the negative margin cancels
+  // the padding's footprint in the flex row).
+  const hitPad = size === "marketing" ? "py-1.75 -my-1.75" : "py-2.25 -my-2.25";
+
   return (
     <div className={`flex items-center ${gap}`}>
       <Link
         href={href}
-        className={`flex items-center ${gap} text-inherit hover:text-inherit`}
+        className={`flex items-center ${gap} ${hitPad} text-inherit hover:text-inherit`}
       >
         {inner}
       </Link>

@@ -17,10 +17,21 @@
 
 import { chromium } from "playwright";
 import { mkdirSync } from "node:fs";
+import { SignJWT } from "jose";
 
 const BASE = process.env.BASE ?? "http://localhost:3117";
 const OUT = process.env.OUT ?? "./shots";
+const SESSION_COOKIE_NAME = "greengo_session";
 
+/* Third element (optional): "tenant" | "admin" — proxy.ts requires a valid
+ * session for these paths. Rather than a real login (which needs a live
+ * Postgres this environment doesn't have), a session JWT is minted inline
+ * with the same SESSION_SECRET the server uses, matching lib/session.ts's
+ * payload shape exactly. This gets past proxy.ts for ANY protected route.
+ * It does NOT substitute for a live database — the 6 routes that actually
+ * call Prisma (see DEVIATIONS.md's Phase 5 note) will still error at
+ * runtime without one; the rest render their still-mock Phase 2 data fully
+ * once the session check passes. */
 const ALL_ROUTES = [
   ["landing", "/"],
   ["how-it-works", "/how-it-works"],
@@ -31,28 +42,49 @@ const ALL_ROUTES = [
   ["forgot-password", "/forgot-password"],
   ["set-password", "/set-password"],
   ["admin-login", "/admin/login"],
-  ["devices", "/devices"],
-  ["device-dashboard", "/devices/gh-1"],
-  ["device-irrigation", "/devices/gh-1/irrigation"],
-  ["device-alerts", "/devices/gh-1/alerts"],
-  ["device-history", "/devices/gh-1/history"],
-  ["device-calibration", "/devices/gh-1/calibration"],
-  ["devices-add", "/devices/add"],
-  ["settings", "/settings"],
-  ["notifications", "/notifications"],
-  ["admin-fleet", "/admin"],
-  ["admin-devices", "/admin/devices"],
-  ["admin-device-detail", "/admin/devices/gh-1"],
-  ["admin-provision", "/admin/devices/provision"],
-  ["admin-account", "/admin/account"],
-  ["admin-audit", "/admin/audit"],
-  ["admin-tenants", "/admin/tenants"],
-  ["admin-tenant-detail", "/admin/tenants/kwame-asante"],
-  ["admin-commands", "/admin/commands"],
-  ["admin-sms", "/admin/sms"],
-  ["admin-config", "/admin/config"],
+  // devices, device-dashboard, settings, admin-fleet, admin-devices, and
+  // admin-account all call Prisma directly (see DEVIATIONS.md's Phase 5
+  // note) — against the placeholder DATABASE_URL this environment has, that
+  // errors immediately per-request, but running all 6 x 5 viewports back to
+  // back exhausts the pg pool's connection attempts and the SERVER ITSELF
+  // stops responding to anything, including unrelated routes. Excluded from
+  // the automated pass; reviewed by reading the code instead (same
+  // structure as their Phase 2 mock-data predecessors, already audited).
+  ["device-irrigation", "/devices/gh-1/irrigation", "tenant"],
+  ["device-alerts", "/devices/gh-1/alerts", "tenant"],
+  ["device-history", "/devices/gh-1/history", "tenant"],
+  ["device-calibration", "/devices/gh-1/calibration", "tenant"],
+  ["devices-add", "/devices/add", "tenant"],
+  ["notifications", "/notifications", "tenant"],
+  ["admin-device-detail", "/admin/devices/gh-1", "admin"],
+  ["admin-provision", "/admin/devices/provision", "admin"],
+  ["admin-audit", "/admin/audit", "admin"],
+  ["admin-tenants", "/admin/tenants", "admin"],
+  ["admin-tenant-detail", "/admin/tenants/kwame-asante", "admin"],
+  ["admin-commands", "/admin/commands", "admin"],
+  ["admin-sms", "/admin/sms", "admin"],
+  ["admin-config", "/admin/config", "admin"],
   ["dev-tokens", "/dev/tokens"],
 ];
+
+async function mintSessionToken(role) {
+  const secret = process.env.SESSION_SECRET;
+  if (!secret) return null;
+  const payload =
+    role === "admin"
+      ? { kind: "admin", userId: "test-admin-id", role: "SUPER_ADMIN", name: "Test Admin" }
+      : { kind: "tenant", userId: "test-user-id", tenantId: "test-tenant-id", name: "Test Tenant" };
+  return new SignJWT(payload)
+    .setProtectedHeader({ alg: "HS256" })
+    .setIssuedAt()
+    .setExpirationTime("1h")
+    .sign(new TextEncoder().encode(secret));
+}
+
+const sessionTokens = {
+  tenant: await mintSessionToken("tenant"),
+  admin: await mintSessionToken("admin"),
+};
 
 const PHASE5_VIEWPORTS = [
   ["380", 380, 800],
@@ -104,13 +136,33 @@ for (const [vpName, width, height] of viewports) {
     if (r.status() >= 400) errors.push(`HTTP ${r.status()} → ${r.url()}`);
   });
 
-  for (const [name, path] of routes) {
+  for (const [name, path, role] of routes) {
     errors.length = 0;
+
+    await ctx.clearCookies();
+    if (role && sessionTokens[role]) {
+      const url = new URL(BASE);
+      await ctx.addCookies([
+        {
+          name: SESSION_COOKIE_NAME,
+          value: sessionTokens[role],
+          domain: url.hostname,
+          path: "/",
+          httpOnly: true,
+          secure: false,
+          sameSite: "Lax",
+        },
+      ]);
+    } else if (role && !sessionTokens[role]) {
+      problems.push(`${name} @${vpName}: SKIPPED — no SESSION_SECRET set, cannot mint ${role} session`);
+      continue;
+    }
+
     let res;
     try {
       /* "load", not "networkidle": these pages run a 1s interval and, in dev,
        * an HMR socket — neither ever goes idle, so networkidle just times out. */
-      res = await page.goto(BASE + path, { waitUntil: "load", timeout: 45000 });
+      res = await page.goto(BASE + path, { waitUntil: "load", timeout: 15000 });
       await page.waitForLoadState("domcontentloaded");
     } catch (e) {
       problems.push(`${name} @${vpName}: navigation failed — ${e.message}`);

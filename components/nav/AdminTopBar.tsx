@@ -66,7 +66,12 @@ export function AdminTopBar({
       <div className="border-hairline px-topbar-x flex items-center gap-6 border-b bg-white py-4">
         <Logo size="app" withAdminBadge asLink={false} />
 
-        <div className="text-body hidden flex-1 gap-1 whitespace-nowrap nav:flex">
+        {/* min-w-0 + overflow-x-auto restores the handoff's literal spec for
+            this div ("flex:1;overflow-x:auto;white-space:nowrap") — see the
+            matching fix + rationale in MarketingNav.tsx. Admin's 5-item nav
+            (Fleet/Devices/Tenants/SMS log/Config) needs this even more than
+            marketing's 4-item one. */}
+        <div className="text-body hidden min-w-0 flex-1 gap-1 overflow-x-auto whitespace-nowrap nav:flex">
           {LINKS.map((l) => (
             <Link
               key={l.id}

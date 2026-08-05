@@ -57,7 +57,13 @@ export function SlidingTabs<T extends string>({
             role="tab"
             aria-selected={active}
             onClick={() => onChange(o.value)}
-            className={`rounded-pill-sm text-sm relative z-1 cursor-pointer border-0 bg-transparent px-2.5 py-2.25 font-semibold whitespace-nowrap transition-colors duration-250 ${
+            /* min-h-11 (44px): the handoff's literal 9px/10px padding renders
+               this at ~37px tall. It's a primary control (switches the whole
+               form), and the handoff's own README states "Touch targets are
+               ≥44px on all primary buttons/inputs" — the explicit numeric
+               requirement wins over the un-checked pixel value, same
+               reasoning as DEV-001. Visual padding/font untouched. */
+            className={`rounded-pill-sm text-sm relative z-1 flex min-h-11 cursor-pointer items-center justify-center border-0 bg-transparent px-2.5 py-2.25 font-semibold whitespace-nowrap transition-colors duration-250 ${
               active ? "text-canopy" : "text-muted"
             }`}
           >
