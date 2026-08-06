@@ -14,7 +14,9 @@ read that before ruling anything "wrong."
 Next.js 16 (App Router) · TypeScript · Tailwind CSS v4 (CSS-first `@theme`,
 see `app/globals.css`) · PostgreSQL + Prisma 7 · session auth via a signed
 httpOnly cookie (no NextAuth — the identifier is a phone number and the
-flow is custom).
+flow is custom). Installable as a PWA (DEV-014) — a hand-written service
+worker caches the static app shell for flaky-3G resilience; `/api/*` is
+never cached, since telemetry/pump commands/auth always need real state.
 
 ## Setup
 

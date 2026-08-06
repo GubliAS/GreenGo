@@ -424,6 +424,22 @@ See `README.md` — setup, env vars, migration/seed commands, a curl walkthrough
 
 ---
 
+## DEV-014 — PWA support (installable, offline app-shell)
+
+**Status:** AUTHORISED (2026-08-06, requested directly)
+**Type:** Authorised expansion beyond the handoff — the handoff has no PWA artifacts at all (no manifest, no service worker, no icons)
+
+Added on request, given the product's own stated audience (Ghanaian smallholder farmers on Android, frequently on 3G) is exactly who install-to-homescreen and an offline app shell serve best.
+
+- **`app/manifest.ts`** — Next's native manifest convention, auto-linked into every page's `<head>`. `start_url: "/devices"` (the tenant's real landing point once installed, not the marketing site). `theme_color`/`background_color` from the existing brand tokens (`--color-canopy` / white).
+- **Icons** — `app/icon.tsx` (32×32 favicon) and `app/apple-icon.tsx` (180×180) use Next's automatic icon convention; `app/icon-192.png/route.tsx` and `app/icon-512.png/route.tsx` are explicit routes for the manifest's `icons` array (that convention only wires up `<link>` tags, not the manifest). All four render from one shared helper, `lib/appIcon.tsx`, using `next/og`'s `ImageResponse` — the exact droplet-mark geometry from `components/icons.tsx`'s `DropletMark` (viewBox `0 0 72 84`, the chosen "2b" option from GreenGo Logo Options), on a solid canopy-green tile with ~14% inset so the mark stays inside the safe zone a maskable icon's OS-applied mask can clip into. `ImageResponse`/satori can't read CSS custom properties, so these are the theme's raw hex values (`#17352A`/`#2F9D46`/`#EAF7EE`) written directly — the one place in this codebase hex literals belong outside `globals.css` and `/dev/tokens`, for the same reason those two are exempted in the Phase 6 raw-hex audit.
+- **`public/sw.js`** — hand-written, not a plugin (`next-pwa`'s Turbopack support isn't reliably solid, and this app's caching needs don't warrant a Workbox dependency). Cache-first for static assets, network-first-with-offline-fallback for page navigations, and **`/api/*` is never intercepted at all** — telemetry, pump commands, and auth need the real device/session state on every single request; caching any of them would be actively wrong, not just stale. `app/offline/page.tsx` is the precached fallback shown when a navigation fails with nothing cached.
+- **`components/PwaRegister.tsx`** — a render-nothing client component, mounted once in `app/layout.tsx`, that registers the service worker post-hydration.
+
+Verified: typecheck clean, build clean (`/icon`, `/apple-icon`, `/manifest.webmanifest`, `/icon-192.png`, `/icon-512.png`, `/offline`, `/sw.js` all present and correctly typed/served), and the generated icons fetched and visually confirmed — correct mark, correct colours, safe-zone padding intact at both 192 and 512px.
+
+---
+
 ## Pending — no ruling needed yet
 
 DEV-010 (photography upscale) awaits your decision. Everything else raised during the build was either fixed inline or logged above as a scope decision — see each phase's section for detail.

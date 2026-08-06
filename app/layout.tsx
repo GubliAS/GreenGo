@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import {
   Bricolage_Grotesque,
   Newsreader,
@@ -7,6 +7,7 @@ import {
 } from "next/font/google";
 import "./globals.css";
 import { ToastProvider } from "@/components/ui/Toast";
+import { PwaRegister } from "@/components/PwaRegister";
 
 /* Fonts are self-hosted by next/font at build time — no render-blocking
  * request to fonts.googleapis.com. The handoff loaded all four from the CDN;
@@ -44,6 +45,17 @@ export const metadata: Metadata = {
   title: "GreenGo — soil moisture & greenhouse monitor",
   description:
     "GreenGo watches soil moisture, temperature and humidity every 10 seconds, texts you when the soil runs dry, and lets you switch the pump on from anywhere.",
+  // PWA installability (DEV-014). app/manifest.ts is auto-linked by Next;
+  // appleWebApp covers iOS, which ignores the manifest for "standalone" mode.
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "GreenGo",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#17352A",
 };
 
 export default function RootLayout({
@@ -55,6 +67,7 @@ export default function RootLayout({
         className={`${bricolage.variable} ${newsreader.variable} ${publicSans.variable} ${plexMono.variable}`}
       >
         <ToastProvider>{children}</ToastProvider>
+        <PwaRegister />
       </body>
     </html>
   );
