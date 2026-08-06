@@ -171,6 +171,16 @@
   --shadow-hero: 0 20px 48px rgba(0, 0, 0, 0.25);    /* 1 · hero reading card */
   --shadow-pill: 0 1px 3px rgba(20, 35, 25, 0.12);   /* 2 · active tab/role pill */
 
+  /* ── Blur (backdrop-filter) ───────────────────────────────────────── */
+  --blur-nav: 10px;   /* 1 · scrolled marketing nav pill */
+  --blur-hero: 14px;  /* 1 · landing hero reading card */
+
+  /* ── Menu-offset (Phase 6: replaces top-[calc(100%+Npx)] arbitrary values
+     on ProfileMenu/Dropdown/Tooltip — same two literal offsets the handoff
+     uses for every floating menu, now real tokens) ────────────────────── */
+  --spacing-menu-gap: 6px;     /* Dropdown, Tooltip */
+  --spacing-menu-gap-lg: 8px;  /* ProfileMenu */
+
   /* ── Fluid spacing (11 distinct clamps) ───────────────────────────── */
   --spacing-page: clamp(20px, 3.5vw, 40px);        /* 11 · app/admin page padding */
   --spacing-nav-gap: clamp(10px, 2vw, 32px);       /*  6 · marketing nav gap */
@@ -331,6 +341,30 @@
 }
 @utility border-l-hair {
   border-left-width: 1.5px;
+}
+
+/* Floating-menu positioning (ProfileMenu, Dropdown, Tooltip). Replaces
+   top-[calc(100%+8px)]-style arbitrary values with real tokens — Phase 6's
+   audit for exactly this class of escape hatch. */
+@utility top-menu-gap {
+  top: calc(100% + var(--spacing-menu-gap));
+}
+@utility top-menu-gap-lg {
+  top: calc(100% + var(--spacing-menu-gap-lg));
+}
+@utility bottom-menu-gap {
+  bottom: calc(100% + var(--spacing-menu-gap));
+}
+
+/* Modal max-height (DEV-004 — no handoff reference for this component).
+   Viewport-relative, so it can't live in the --spacing-* scale like every
+   other size in this file; a dedicated utility keeps it out of inline
+   arbitrary-value brackets. */
+@utility max-h-modal-mobile {
+  max-height: 92vh;
+}
+@utility max-h-modal-desktop {
+  max-height: 85vh;
 }
 
 /* Segmented-bar segments. The fill colour is computed per segment in JS

@@ -214,7 +214,7 @@ export function ProfileMenu({
       {open && (
         <div
           role="menu"
-          className="border-hair border-line-soft rounded-menu shadow-menu absolute top-[calc(100%+8px)] right-0 z-30 min-w-50 bg-white p-2.5"
+          className="border-hair border-line-soft rounded-menu shadow-menu top-menu-gap-lg absolute right-0 z-30 min-w-50 bg-white p-2.5"
         >
           <div className="border-hairline mb-1.5 border-b px-2.5 py-2">
             <div className="text-body text-canopy font-semibold">{name}</div>

@@ -110,7 +110,7 @@ export function Dropdown({
           aria-activedescendant={`${label}-opt-${activeIndex}`}
           tabIndex={-1}
           onKeyDown={onKeyDown}
-          className="border-hair border-line-soft rounded-menu shadow-menu absolute top-[calc(100%+6px)] left-0 z-20 m-0 list-none bg-white p-1.5"
+          className="border-hair border-line-soft rounded-menu shadow-menu top-menu-gap absolute left-0 z-20 m-0 list-none bg-white p-1.5"
           style={{ minWidth }}
         >
           {options.map((o, i) => {

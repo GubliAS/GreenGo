@@ -58,11 +58,17 @@ export function StatusPill({
 
 export function StateDot({
   state,
-  on = false,
+  on = true,
   size = 10,
 }: {
   state: "confirmed" | "pending" | "unknown";
-  /** Only meaningful for `confirmed`: distinguishes pump on from pump off. */
+  /** Only meaningful for `confirmed`. Defaults to true: a bare connection/
+   *  last-seen dot (Admin Device Detail's Live snapshot tab) means "confirmed
+   *  = connected = green" with no pump concept involved. PumpControl passes
+   *  this explicitly (on={pumpOn}) since ITS confirmed dot specifically
+   *  distinguishes pump-on from pump-off-but-still-connected. Found via the
+   *  Phase 6 "does every state render correctly" check — the connection dot
+   *  was silently defaulting to the pump's "off" grey instead of leaf green. */
   on?: boolean;
   size?: number;
 }) {

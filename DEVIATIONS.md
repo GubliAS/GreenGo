@@ -367,6 +367,63 @@ Every claim/register flow keeps the Phase 2 mock OTP (`1234` verifies, `9999` ex
 
 ---
 
+## Phase 6 — final verification
+
+### 1. Manifest walk — every row built, routed, and (almost) reachable
+
+All 29 product routes from `MANIFEST.md` §A + §G.1 exist as `page.tsx` files and were cross-checked against the file tree — none missing, none extra (`/dev/tokens` is the one non-product route, a Phase 1 deliverable). Reachability checked by tracing every incoming `href`/`Link`:
+
+| Route | Reachable from |
+|---|---|
+| All 4 marketing sub-pages, 5 tenant nav items, 5 admin nav items | `MarketingNav`/`AppTopBar`/`AdminTopBar`'s `LINKS` arrays |
+| `/devices/[id]`, `/admin/devices/[id]`, `/admin/tenants/[id]` | Row/card links on their respective list pages |
+| `/devices/[id]/calibration` | Settings' "Re-run calibration" |
+| `/devices/[id]/history` | Device Dashboard's "View full history" |
+| `/devices/add` | Devices List's empty-state "I have a claim code" |
+| `/admin/devices/provision` | Admin Devices List's "+ Provision device" + unclaimed-row links |
+| `/forgot-password` | Login's "Forgot password?" |
+| `/admin/login` | No explicit link anywhere (admins aren't part of the public marketing audience) — reached by `proxy.ts` redirecting any unauthenticated `/admin/*` request there. Typed-URL/bookmark entry, same as most internal admin tools. |
+
+**One genuine gap: `/set-password` has no caller.** It was built per DEV-005 for "a session that needs a password set without the full claim flow — e.g., a tenant invited directly by an admin" — but that invite flow doesn't exist, so nothing currently links here. The password-reset flow that DOES exist (`/forgot-password`) built its own final step inline rather than redirecting to this page. Reporting as instructed rather than manufacturing a link to a feature that isn't built: `/set-password` is real, functional, tested infrastructure sitting unlinked until an admin-invite flow is added.
+
+### 2. Arbitrary Tailwind values / raw hex — 7 found, all fixed; 0 remain
+
+`grep -rnE '\b[a-z-]+-\[[^]]+\]'` across `app/`, `components/`, `lib/` (excluding the one legitimate `grid-cols-[repeat(...)]` CSS function) found 7 arbitrary-value escapes, all missing tokens rather than deviations:
+
+| Found | Fixed as |
+|---|---|
+| `backdrop-blur-[14px]` (hero card), `backdrop-blur-[10px]` (scrolled nav) | New `--blur-hero`/`--blur-nav` theme tokens → `backdrop-blur-hero`/`backdrop-blur-nav` |
+| `top-[calc(100%+8px)]` (ProfileMenu), `top-[calc(100%+6px)]` (Dropdown, Tooltip ×2) | New `--spacing-menu-gap`/`--spacing-menu-gap-lg` tokens + `@utility top-menu-gap`/`top-menu-gap-lg`/`bottom-menu-gap` |
+| `max-h-[92vh]`/`max-h-[85vh]` (Modal — DEV-004, no handoff reference) | `@utility max-h-modal-mobile`/`max-h-modal-desktop` (viewport-relative, so it can't live in the `--spacing-*` px/rem scale like everything else) |
+
+Raw hex (`grep -rnE '#[0-9a-fA-F]{3,8}\b'`) found hits only in `/dev/tokens`' own reference-data arrays (the whole point of that route is to display every hex value against its token name) and in code comments documenting the ramp math — zero hits in actual applied styles. Not violations.
+
+### 3. Three device states — verified live, one real bug found and fixed
+
+Drove `/admin/devices/gh-1`'s Live Snapshot tab through all three states with a scripted click-through (session-only page, no live DB needed). Confirmed/Pending/Unknown all render distinctly and correctly for soil moisture, relay, and last-seen — **except** the connection dot on "Confirmed" rendered the pump's dim "off" grey instead of leaf green.
+
+**Root cause:** `StateDot`'s `confirmed` colour depends on an `on` prop meant to distinguish pump-on from pump-off-but-connected (correct for `PumpControl`'s pump dot). `DeviceDetailTabs`' connection dot reused the same component without passing `on`, silently defaulting to `on=false` → confirmed rendered as "off" grey instead of connected green. Caught by literally clicking through the states and looking, not by reading the code — exactly the class of bug DEV-011 already warned reads well but tests wrong.
+
+**Fix:** changed `StateDot`'s `on` default from `false` to `true` — a bare connection dot means "confirmed = connected = green" with no pump concept involved; `PumpControl` is unaffected since it always passes `on={pumpOn}` explicitly, and an explicit prop overrides a default regardless of what the default is. Verified both call sites after the fix: connection dot now green when confirmed, pump dot's on/off distinction unchanged.
+
+The Device Dashboard's own three-state switcher (the other page with full 3-state coverage per MANIFEST §D.1) requires a live device row and couldn't be click-tested this session (see the Phase 5 verification-method note); its state-branching logic was read end-to-end in Phase 2C/4B and mirrors the now-fixed pattern exactly, using its own dedicated `pumpDotColor`/`pumpDotAnim` variables rather than `StateDot`, so it was never exposed to this particular bug.
+
+Devices List and Fleet Overview remain confirmed-only per the handoff's own design gap (MANIFEST §D.2, not something Phase 4-6 was tasked to invent) — Phase 4B added a real online/offline distinction to both from live `lastSeenAt` data, which is more than the handoff itself designs, but not the full three-state vocabulary.
+
+### 4. tenant_id provenance — audited, clean
+
+Every `tenantId` in `app/api/**/*.ts` traces to one of: `session.tenantId` (the authenticated session), a `Tenant` row just created in the same request (registration), or a `Device`/`User` row looked up server-side by a server-verified identifier (device API key, phone number) — never `request.json()`, `searchParams`, or route `params`. All three tenant-scoped pages (`/devices`, `/devices/[id]`, `/settings`) call `requireTenantId(session)`, the single enforcement point in `lib/db.ts` that throws rather than returning a fallback. Admin pages read `device.tenantId` only for display/filtering on an already-fetched fleet-wide row — never as a scope filter, since admin is deliberately not tenant-scoped.
+
+### 5. Build and typecheck
+
+`npx tsc --noEmit` clean and `npx next build` clean throughout every phase of this build — checked after every batch, not just at the end (see each phase's commit message). Final Phase 6 rebuild after the token/StateDot fixes above: clean.
+
+### 6. README.md
+
+See `README.md` — setup, env vars, migration/seed commands, a curl walkthrough for the device endpoint, and the demo path.
+
+---
+
 ## Pending — no ruling needed yet
 
-DEV-010 awaits your decision. Items discovered during later phases will be appended here with `PENDING` status and raised at the next checkpoint.
+DEV-010 (photography upscale) awaits your decision. Everything else raised during the build was either fixed inline or logged above as a scope decision — see each phase's section for detail.

@@ -37,7 +37,7 @@ export function HeroReadingCard() {
     <div
       id="live"
       data-gg-anim="1"
-      className="rounded-card shadow-hero animate-rise min-w-70 bg-white/92 px-6 py-5.5 backdrop-blur-[14px]"
+      className="rounded-card shadow-hero animate-rise min-w-70 backdrop-blur-hero bg-white/92 px-6 py-5.5"
       style={{ animationDelay: "120ms" }}
     >
       <div className="mb-3 flex items-center justify-between gap-4">

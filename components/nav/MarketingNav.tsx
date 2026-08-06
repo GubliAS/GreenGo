@@ -54,7 +54,7 @@ export function MarketingNav({
       <div
         className={`gap-nav-gap rounded-button flex w-full items-center py-4 pr-5 pl-6.5 transition-all duration-350 ${
           scrolled
-            ? "shadow-nav max-w-nav bg-white/92 backdrop-blur-[10px]"
+            ? "shadow-nav max-w-nav backdrop-blur-nav bg-white/92"
             : "max-w-nav-open bg-white shadow-none"
         }`}
       >

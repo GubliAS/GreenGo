@@ -124,7 +124,7 @@ export function Modal({
         aria-describedby={description ? descId : undefined}
         tabIndex={-1}
         data-gg-anim="1"
-        className={`animate-rise-fast border-hair border-line-soft shadow-panel nav:shadow-menu nav:rounded-menu relative flex max-h-[92vh] w-full flex-col overflow-hidden rounded-t-panel bg-white nav:max-h-[85vh] nav:rounded-b-menu ${widths[size]}`}
+        className={`animate-rise-fast border-hair border-line-soft shadow-panel nav:shadow-menu nav:rounded-menu max-h-modal-mobile relative flex w-full flex-col overflow-hidden rounded-t-panel bg-white nav:max-h-modal-desktop nav:rounded-b-menu ${widths[size]}`}
       >
         <div className="border-hairline flex items-start justify-between gap-4 border-b px-6 py-5">
           <div>

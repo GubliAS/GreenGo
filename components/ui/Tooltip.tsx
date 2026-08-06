@@ -24,8 +24,8 @@ export function Tooltip({
 
   const position =
     side === "top"
-      ? "bottom-[calc(100%+6px)] left-1/2 -translate-x-1/2"
-      : "top-[calc(100%+6px)] left-1/2 -translate-x-1/2";
+      ? "bottom-menu-gap left-1/2 -translate-x-1/2"
+      : "top-menu-gap left-1/2 -translate-x-1/2";
 
   return (
     <span
