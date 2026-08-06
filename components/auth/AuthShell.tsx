@@ -6,7 +6,7 @@ import { QuoteRotator } from "./QuoteRotator";
  * Source: GreenGo Login.dc.html. The page itself never scrolls — only the
  * left form column does, via .gg-scroll (scrollbar hidden). Right column is
  * photo + rotating quote, stacking below the form under ~600px combined width
- * via the intrinsic minmax(300px,1fr) grid. */
+ * via the intrinsic minmax(min(300px,100%),1fr) grid. */
 
 export function AuthShell({
   children,
@@ -18,7 +18,7 @@ export function AuthShell({
   admin?: boolean;
 }) {
   return (
-    <div className="grid h-screen grid-cols-[repeat(auto-fit,minmax(300px,1fr))] auto-rows-[100%] overflow-hidden">
+    <div className="grid h-screen grid-cols-[repeat(auto-fit,minmax(min(300px,100%),1fr))] auto-rows-[100%] overflow-hidden">
       <div className="gg-scroll p-auth mx-auto box-border flex h-full w-full max-w-auth-form flex-col justify-center overflow-y-auto">
         <div className="mb-10">
           {admin ? (
@@ -35,7 +35,7 @@ export function AuthShell({
           src="/login-greenhouse.jpg"
           alt=""
           fill
-          /* Below 760px the two-column grid stacks (minmax(300px,1fr) can't
+          /* Below 760px the two-column grid stacks (minmax(min(300px,100%),1fr) can't
            * fit two tracks), so the photo column becomes full-width, not half.
            * A flat "50vw" hint made the browser fetch a half-resolution source
            * and stretch it 2x on mobile — caught by the screenshot harness's

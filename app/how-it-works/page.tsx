@@ -77,7 +77,7 @@ export default function HowItWorksPage() {
       </section>
 
       <section className="px-section-x py-14">
-        <div className="bg-mint rounded-hero p-panel grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-4">
+        <div className="bg-mint rounded-hero p-panel grid grid-cols-[repeat(auto-fit,minmax(min(220px,100%),1fr))] gap-4">
           {STEPS.map((s) => (
             <NumberedStep key={s.n} number={s.n} title={s.title} body={s.body} />
           ))}
@@ -85,7 +85,7 @@ export default function HowItWorksPage() {
       </section>
 
       <section className="px-section-x py-14">
-        <div className="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] items-center gap-12">
+        <div className="grid grid-cols-[repeat(auto-fit,minmax(min(280px,100%),1fr))] items-center gap-12">
           <div>
             <div className="mb-3.5">
               <Eyebrow>The hardware</Eyebrow>

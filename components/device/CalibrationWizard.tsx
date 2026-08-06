@@ -95,7 +95,7 @@ export function CalibrationWizard({ deviceLabel }: { deviceLabel: string }) {
       {step === "confirm" && dryRaw !== null && wetRaw !== null && (
         <Card className="flex flex-col gap-4">
           <div className="text-lg text-canopy font-bold">Step 3 of 3 — Confirm</div>
-          <div className="grid grid-cols-[repeat(auto-fit,minmax(160px,1fr))] gap-4">
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(min(160px,100%),1fr))] gap-4">
             <MetricReadout label="Dry raw value" value={dryRaw} />
             <MetricReadout label="Wet raw value" value={wetRaw} />
             <MetricReadout

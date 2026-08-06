@@ -20,7 +20,7 @@ export default function ContactPage() {
     <div className="max-w-marketing relative mx-auto">
       <MarketingNav active="contact" />
 
-      <section className="px-section-x grid grid-cols-[repeat(auto-fit,minmax(300px,1fr))] items-start gap-14 pt-18 pb-24">
+      <section className="px-section-x grid grid-cols-[repeat(auto-fit,minmax(min(300px,100%),1fr))] items-start gap-14 pt-18 pb-24">
         <div>
           <div className="mb-3.5">
             <Eyebrow>Contact</Eyebrow>
@@ -66,7 +66,7 @@ export default function ContactPage() {
 
         <div className="bg-mint rounded-hero p-panel">
           <form className="flex flex-col gap-4.5">
-            <div className="grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-4">
+            <div className="grid grid-cols-[repeat(auto-fit,minmax(min(180px,100%),1fr))] gap-4">
               <FormField label="Name" size="md" placeholder="Your name" name="name" />
               <FormField
                 label="Farm / location"

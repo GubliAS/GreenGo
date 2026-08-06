@@ -88,7 +88,7 @@ export default async function AdminFleetPage() {
       <div className="p-page max-w-wide mx-auto flex flex-col gap-5.5">
         <PageTitle>Fleet overview</PageTitle>
 
-        <div className="grid grid-cols-[repeat(auto-fit,minmax(120px,1fr))] gap-3">
+        <div className="grid grid-cols-[repeat(auto-fit,minmax(min(120px,100%),1fr))] gap-3">
           {counts.map((c) => (
             <StatCard key={c.label} value={c.value} label={c.label} valueClassName={c.tone} />
           ))}
@@ -122,7 +122,7 @@ export default async function AdminFleetPage() {
           </div>
         )}
 
-        <div className="grid grid-cols-[repeat(auto-fit,minmax(300px,1fr))] gap-4">
+        <div className="grid grid-cols-[repeat(auto-fit,minmax(min(300px,100%),1fr))] gap-4">
           <Card>
             <CardTitle>Recent activity</CardTitle>
             <div className="mt-4 flex flex-col gap-3.5">

@@ -51,7 +51,7 @@ export function LiveDemoReadings() {
   }, []);
 
   return (
-    <div className="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-5">
+    <div className="grid grid-cols-[repeat(auto-fit,minmax(min(280px,100%),1fr))] gap-5">
       {/* Hero soil card */}
       <div className="border-hair border-hairline rounded-card-sm p-card-lg flex flex-col gap-5 bg-white">
         <div className="flex items-center justify-between gap-4">

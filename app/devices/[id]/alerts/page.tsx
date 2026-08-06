@@ -54,7 +54,7 @@ export default async function AlertsPage({
 
         <Card className="flex flex-col gap-4.5">
           <CardTitle>Temperature &amp; humidity bands</CardTitle>
-          <div className="grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-4">
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(min(180px,100%),1fr))] gap-4">
             <div>
               <label className="text-meta text-canopy mb-1.5 block font-semibold">
                 Temp min / max (°C)

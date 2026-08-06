@@ -54,7 +54,7 @@ const ROWS: { queued: string; to: string; device: string; body: string; status: 
 export function AdminSmsTable() {
   return (
     <div className="flex flex-col gap-4.5">
-      <div className="grid grid-cols-[repeat(auto-fit,minmax(160px,1fr))] gap-3">
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(min(160px,100%),1fr))] gap-3">
         <Card variant="compact">
           <div className="text-caption text-muted mb-1">Today</div>
           <div className="font-mono text-lg text-canopy font-semibold">GHS 0.60</div>

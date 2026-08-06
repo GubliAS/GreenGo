@@ -76,7 +76,7 @@ function IdentityTab({
 
   return (
     <div className="flex flex-col gap-3.5">
-      <Card className="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-5">
+      <Card className="grid grid-cols-[repeat(auto-fit,minmax(min(220px,100%),1fr))] gap-5">
         <Field label="MAC address" value={device.mac} />
         <Field
           label="Claim code"
@@ -153,7 +153,7 @@ function LiveSnapshotTab() {
           ]}
         />
       </div>
-      <Card className="grid grid-cols-[repeat(auto-fit,minmax(140px,1fr))] gap-4">
+      <Card className="grid grid-cols-[repeat(auto-fit,minmax(min(140px,100%),1fr))] gap-4">
         <MetricReadout label="Soil moisture" value={soil} size="sm" />
         <MetricReadout label="Relay" value={relay} size="sm" />
         <MetricReadout label="Mode" value="AUTO" size="sm" />
@@ -194,7 +194,7 @@ function CalibrationTab() {
       )}
 
       <Card
-        className={`grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-5 ${
+        className={`grid grid-cols-[repeat(auto-fit,minmax(min(220px,100%),1fr))] gap-5 ${
           calibrated ? "opacity-100" : "opacity-40"
         }`}
       >

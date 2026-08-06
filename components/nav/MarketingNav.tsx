@@ -66,22 +66,36 @@ export function MarketingNav({
             content's natural width, so right at the 760-820px band (just
             above the mobile cutoff) the nav-links + login + button collectively
             need more room than the pill has, and the rightmost items get
-            pushed past the viewport edge instead of scrolling internally. */}
-        <div className="gap-nav-links text-body text-ink hidden min-w-0 flex-1 justify-center overflow-x-auto whitespace-nowrap nav:flex">
-          {LINKS.map((l) => (
-            <Link
-              key={l.href}
-              href={l.href}
-              aria-current={active === l.id ? "page" : undefined}
-              className={`rounded-nav px-4 py-2.25 font-medium ${
-                active === l.id
-                  ? "bg-mint text-canopy"
-                  : "text-inherit hover:bg-mint hover:text-canopy active:bg-mint-deep"
-              }`}
-            >
-              {l.label}
-            </Link>
-          ))}
+            pushed past the viewport edge instead of scrolling internally.
+
+            justify-center lived on THIS div in the handoff's literal spec too
+            — but centering a flex row that's wider than its own container
+            clips equal amounts off BOTH ends instead of scrolling from a
+            natural start (confirmed at 768px: "How it works" and "Contact"
+            both lost their first/last letter). The fix is the standard one
+            for "centered until it needs to scroll": move the flex+gap to an
+            inner w-max div and center THAT with margin auto instead of
+            justify-content — CSS resolves auto margins to zero once content
+            is wider than its container, so it falls back to a flush-left,
+            fully-scrollable start with nothing clipped, and centers exactly
+            as before whenever it actually fits. */}
+        <div className="hidden min-w-0 flex-1 overflow-x-auto whitespace-nowrap nav:block">
+          <div className="gap-nav-links text-body text-ink mx-auto flex w-max">
+            {LINKS.map((l) => (
+              <Link
+                key={l.href}
+                href={l.href}
+                aria-current={active === l.id ? "page" : undefined}
+                className={`rounded-nav px-4 py-2.25 font-medium ${
+                  active === l.id
+                    ? "bg-mint text-canopy"
+                    : "text-inherit hover:bg-mint hover:text-canopy active:bg-mint-deep"
+                }`}
+              >
+                {l.label}
+              </Link>
+            ))}
+          </div>
         </div>
 
         <div className="hidden items-center gap-2 nav:flex">

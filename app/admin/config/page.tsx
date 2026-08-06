@@ -36,7 +36,7 @@ export default function AdminConfigPage() {
             Applied to newly claimed devices. Tenants can override per device
             on their Alerts page.
           </p>
-          <div className="grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-4">
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(min(180px,100%),1fr))] gap-4">
             <ConfigField label="Soil below (%)" defaultValue="30" />
             <ConfigField label="Alert cooldown (min)" defaultValue="60" />
           </div>
@@ -47,7 +47,7 @@ export default function AdminConfigPage() {
           <p className="text-meta text-muted m-0">
             Enforced server-side regardless of what the client requests.
           </p>
-          <div className="grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-4">
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(min(180px,100%),1fr))] gap-4">
             <ConfigField label="Max run (s)" defaultValue="600" />
             <ConfigField label="Cooldown between cycles (s)" defaultValue="900" />
             <ConfigField label="Daily runtime cap (s)" defaultValue="3600" />
@@ -57,7 +57,7 @@ export default function AdminConfigPage() {
 
         <Card className="flex flex-col gap-4.5">
           <CardTitle>SMS &amp; quiet hours</CardTitle>
-          <div className="grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-4">
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(min(180px,100%),1fr))] gap-4">
             <ConfigField label="Daily SMS cap" defaultValue="10" />
             <div>
               <label className="text-meta text-canopy mb-1.5 block font-semibold">

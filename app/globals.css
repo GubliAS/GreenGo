@@ -356,6 +356,17 @@
   bottom: calc(100% + var(--spacing-menu-gap));
 }
 
+/* Caps a min-width at the container's own 100% — same "doesn't fit at 320px"
+   class of bug as the grid fix below, found by actually checking the hero on
+   a real narrow phone: the handoff's literal min-width:280px on the Landing
+   live-reading card (min-w-70) is wider than the available hero content
+   width at 320px, so the hero's own rounded-corner overflow-hidden silently
+   CLIPPED the card's right edge — no page-level scrollbar, so the mechanical
+   H-OVERFLOW check never caught it; only looking at the rendered hero did. */
+@utility min-w-hero-card {
+  min-width: min(280px, 100%);
+}
+
 /* Modal max-height (DEV-004 — no handoff reference for this component).
    Viewport-relative, so it can't live in the --spacing-* scale like every
    other size in this file; a dedicated utility keeps it out of inline

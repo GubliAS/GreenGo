@@ -53,7 +53,7 @@ export function TenantDetailPage({ tenantName }: { tenantName: string }) {
 
         {tab === "profile" && (
           <div className="flex flex-col gap-3.5">
-            <Card className="grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-5">
+            <Card className="grid grid-cols-[repeat(auto-fit,minmax(min(180px,100%),1fr))] gap-5">
               <Field label="Name" value={tenantName} />
               <Field label="Phone" value="+233 24 XXX XX01" />
               <Field label="Joined" value="2 months ago" />

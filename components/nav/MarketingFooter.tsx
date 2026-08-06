@@ -19,7 +19,7 @@ export function MarketingFooter({ surface = "light" }: { surface?: "light" | "ph
 
   return (
     <div
-      className={`px-footer-x relative grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-8 border-t pt-9 ${rule} ${onPhoto ? "pb-10" : ""}`}
+      className={`px-footer-x relative grid grid-cols-[repeat(auto-fit,minmax(min(200px,100%),1fr))] gap-8 border-t pt-9 ${rule} ${onPhoto ? "pb-10" : ""}`}
     >
       <div>
         <div className={`font-display text-2xl mb-2.5 font-bold ${heading}`}>GreenGo</div>

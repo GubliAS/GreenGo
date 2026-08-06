@@ -888,7 +888,7 @@ function ComponentSection() {
           />
         </div>
       </Card>
-      <div className="grid grid-cols-[repeat(auto-fit,minmax(300px,1fr))] gap-4">
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(min(300px,100%),1fr))] gap-4">
         <PumpControl
           state={demo}
           mode={mode}
@@ -903,7 +903,7 @@ function ComponentSection() {
             </AlertBanner>
           )}
           <Card variant="compact">
-            <div className="grid grid-cols-[repeat(auto-fit,minmax(130px,1fr))] gap-3.5">
+            <div className="grid grid-cols-[repeat(auto-fit,minmax(min(130px,100%),1fr))] gap-3.5">
               <MetricReadout
                 label="Air temp"
                 value={demo === "unknown" ? "—" : "26.5"}
@@ -1012,7 +1012,7 @@ function ComponentSection() {
 
       <Sub>Form fields — 5 sizes, mono, readonly, error</Sub>
       <Card variant="compact">
-        <div className="grid grid-cols-[repeat(auto-fit,minmax(240px,1fr))] gap-4">
+        <div className="grid grid-cols-[repeat(auto-fit,minmax(min(240px,100%),1fr))] gap-4">
           <FormField label="Phone number" type="tel" inputMode="numeric" placeholder="0244 123 456" size="lg" />
           <FormField label="Name" placeholder="Your name" size="md" />
           <FormField label="Name" defaultValue="Kwame Asante" size="sm" />
@@ -1067,7 +1067,7 @@ function ComponentSection() {
       </Card>
 
       <Sub>Stat cards & readouts</Sub>
-      <div className="grid grid-cols-[repeat(auto-fit,minmax(120px,1fr))] gap-3">
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(min(120px,100%),1fr))] gap-3">
         <StatCard value="1" label="Total devices" />
         <StatCard value="1" label="Online" valueClassName="text-leaf" />
         <StatCard value="0" label="Offline" valueClassName="text-faint" />
@@ -1075,7 +1075,7 @@ function ComponentSection() {
         <StatCard value="1" label="Unclaimed" valueClassName="text-warn-text" />
         <StatCard value="0" label="Alerting now" valueClassName="text-faint" />
       </div>
-      <div className="grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-3">
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(min(200px,100%),1fr))] gap-3">
         <StatCard variant="spec" value="10s" label="reporting interval" />
         <StatCard variant="spec" value="3" label="metrics tracked — soil, temp, humidity" />
         <StatCard variant="spec" value="SMS" label="alerts, no app or data plan required" />
@@ -1128,7 +1128,7 @@ function ComponentSection() {
       </Card>
 
       <Sub>Numbered steps</Sub>
-      <div className="bg-mint rounded-hero p-panel grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-4">
+      <div className="bg-mint rounded-hero p-panel grid grid-cols-[repeat(auto-fit,minmax(min(220px,100%),1fr))] gap-4">
         <NumberedStep
           number="01"
           title="Sensor reads the soil"
@@ -1142,7 +1142,7 @@ function ComponentSection() {
       </div>
 
       <Sub>Success, empty & loading states</Sub>
-      <div className="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-4">
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(min(280px,100%),1fr))] gap-4">
         <Card>
           <SuccessPanel
             title="Phone verified — account created"
@@ -1299,7 +1299,7 @@ function ComponentSection() {
       </div>
 
       <Sub>Card shells & headings</Sub>
-      <div className="grid grid-cols-[repeat(auto-fit,minmax(240px,1fr))] gap-4">
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(min(240px,100%),1fr))] gap-4">
         {(["default", "compact", "hero", "flat"] as const).map((v) => (
           <Card key={v} variant={v}>
             <CardTitle>Card · {v}</CardTitle>

@@ -132,7 +132,7 @@ export default function LandingPage() {
       {/* ── Feature grid ─────────────────────────────────────────────────── */}
       <section className="px-section-x py-24">
         <div className="bg-mint rounded-hero p-panel-lg">
-          <div className="grid grid-cols-[repeat(auto-fit,minmax(240px,1fr))] gap-5">
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(min(240px,100%),1fr))] gap-5">
             {FEATURES.map((f) => (
               <div
                 key={f.title}
@@ -165,7 +165,7 @@ export default function LandingPage() {
           </h2>
         </div>
         <div className="bg-mint rounded-hero p-panel">
-          <div className="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-4">
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(min(220px,100%),1fr))] gap-4">
             {STEPS.map((s) => (
               <NumberedStep key={s.n} number={s.n} title={s.title} body={s.body} />
             ))}
@@ -175,7 +175,7 @@ export default function LandingPage() {
 
       {/* ── Segmented-bar explainer ──────────────────────────────────────── */}
       <section id="bar" className="px-section-x pt-5 pb-24">
-        <div className="bg-leaf rounded-hero p-band grid grid-cols-[repeat(auto-fit,minmax(300px,1fr))] items-center gap-12">
+        <div className="bg-leaf rounded-hero p-band grid grid-cols-[repeat(auto-fit,minmax(min(300px,100%),1fr))] items-center gap-12">
           <div>
             <div className="mb-3.5">
               <Eyebrow tone="light">The same instrument, two surfaces</Eyebrow>
@@ -224,7 +224,7 @@ export default function LandingPage() {
           </h2>
         </div>
         <div className="bg-mint rounded-hero p-panel">
-          <div className="grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-4">
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(min(200px,100%),1fr))] gap-4">
             {SPECS.map((s) => (
               <StatCard key={s.value} variant="spec" value={s.value} label={s.label} />
             ))}

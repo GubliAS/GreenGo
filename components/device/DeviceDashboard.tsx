@@ -127,7 +127,7 @@ export function DeviceDashboard({
         </AlertBanner>
       )}
 
-      <div className="grid grid-cols-[repeat(auto-fit,minmax(300px,1fr))] gap-4.5">
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(min(300px,100%),1fr))] gap-4.5">
         <Card variant="hero" className="flex flex-col gap-4.5">
           <div className="flex items-center justify-between">
             <span className="font-mono text-caption text-muted tracking-caps uppercase">
@@ -197,7 +197,7 @@ export function DeviceDashboard({
             onToggle={handleToggle}
           />
 
-          <Card variant="compact" className="grid grid-cols-[repeat(auto-fit,minmax(130px,1fr))] gap-3.5">
+          <Card variant="compact" className="grid grid-cols-[repeat(auto-fit,minmax(min(130px,100%),1fr))] gap-3.5">
             <MetricReadout
               label="Air temp"
               value={isUnknown || initialMetrics.tempC === null ? "—" : initialMetrics.tempC}

@@ -27,7 +27,7 @@ export default async function AdminAccountPage() {
         <div className="flex flex-col gap-3.5">
           <Card className="flex flex-col gap-4">
             <CardTitle>Profile</CardTitle>
-            <div className="grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-4">
+            <div className="grid grid-cols-[repeat(auto-fit,minmax(min(180px,100%),1fr))] gap-4">
               <FormField label="Name" size="sm" defaultValue={admin?.name} name="name" />
               <FormField label="Email" size="sm" defaultValue={admin?.email ?? ""} name="email" />
             </div>

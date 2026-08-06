@@ -47,7 +47,7 @@ export default async function DevicesListPage() {
           </div>
         </div>
 
-        <div className="max-w-app grid grid-cols-[repeat(auto-fit,minmax(300px,1fr))] gap-4.5">
+        <div className="max-w-app grid grid-cols-[repeat(auto-fit,minmax(min(300px,100%),1fr))] gap-4.5">
           {devices.map((device, i) => {
             const reading = latestByDevice[i];
             const percent = reading?.soilPct ?? 0;

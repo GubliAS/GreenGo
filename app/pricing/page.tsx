@@ -44,7 +44,7 @@ export default function PricingPage() {
         </p>
       </section>
 
-      <section className="px-section-x grid grid-cols-[repeat(auto-fit,minmax(300px,1fr))] items-start gap-14 pt-12 pb-24">
+      <section className="px-section-x grid grid-cols-[repeat(auto-fit,minmax(min(300px,100%),1fr))] items-start gap-14 pt-12 pb-24">
         {/* Left: what's included */}
         <div className="flex flex-col gap-4">
           <div className="bg-mint rounded-card p-6.5">
@@ -78,7 +78,7 @@ export default function PricingPage() {
             Request a device
           </h2>
           <form className="flex flex-col gap-4">
-            <div className="grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-4">
+            <div className="grid grid-cols-[repeat(auto-fit,minmax(min(180px,100%),1fr))] gap-4">
               <FormField label="Name" size="md" placeholder="Your name" name="name" />
               <FormField
                 label="Phone or email"
@@ -93,7 +93,7 @@ export default function PricingPage() {
               placeholder="Town / region"
               name="location"
             />
-            <div className="grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-4">
+            <div className="grid grid-cols-[repeat(auto-fit,minmax(min(180px,100%),1fr))] gap-4">
               <FormField
                 label="Greenhouse size"
                 size="md"
