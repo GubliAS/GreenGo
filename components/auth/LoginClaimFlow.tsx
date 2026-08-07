@@ -92,9 +92,9 @@ export function LoginClaimFlow() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ phone: loginPhone, password: loginPassword }),
       });
-      const data = await res.json();
-      if (!res.ok || !data.ok) {
-        setLoginError(data.error || "Incorrect phone number or password.");
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data?.ok) {
+        setLoginError(data?.error || "Incorrect phone number or password.");
         return;
       }
       router.push("/devices");
@@ -141,7 +141,7 @@ export function LoginClaimFlow() {
 
   return (
     <>
-      <div className="mb-7 w-80">
+      <div className="mb-7 w-full max-w-80">
         <SlidingTabs
           ariaLabel="Log in or claim your device"
           value={mode}
@@ -164,8 +164,9 @@ export function LoginClaimFlow() {
             </p>
             <div className="flex flex-col gap-4">
               {/* Handoff sets this one field to a fixed 220px, unlike every
-                  other field in the flow which is 100% width. */}
-              <div className="w-55">
+                  other field in the flow which is 100% width. Cap at the
+                  column so it never eats the auth padding on narrow phones. */}
+              <div className="w-55 max-w-full">
                 <FormField
                   label="Phone number"
                   type="tel"
