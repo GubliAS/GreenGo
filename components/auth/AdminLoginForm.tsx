@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormField } from "../ui/FormField";
@@ -12,12 +12,26 @@ import { Button } from "../ui/Button";
  * shows an Email field for the admin profile. Spec: handoff/auth.md §4.
  * Phase 4B: wired to POST /api/auth/admin-login. */
 
+const DEV_ADMIN = {
+  email: "ops@greengo.dev",
+  password: "dev-admin-password",
+} as const;
+
 export function AdminLoginForm() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+
+  // Temporary: ?demo=1 (from the farmer login test-login chip) autofills.
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("demo") === "1") {
+      setEmail(DEV_ADMIN.email);
+      setPassword(DEV_ADMIN.password);
+      setError("");
+    }
+  }, []);
 
   async function handleSubmit() {
     setError("");
@@ -77,6 +91,26 @@ export function AdminLoginForm() {
         >
           {busy ? "Signing in…" : "Log in"}
         </Button>
+        {/* Temporary seed helper — remove before production. */}
+        <div className="border-line mt-2 rounded-input border border-dashed px-3.5 py-3">
+          <div className="text-micro tracking-widest text-faint mb-2 uppercase">
+            Test login
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setEmail(DEV_ADMIN.email);
+              setPassword(DEV_ADMIN.password);
+              setError("");
+            }}
+            className="hover:bg-mint w-full cursor-pointer rounded-sm border-0 bg-transparent px-2 py-1.5 text-left transition-colors"
+          >
+            <div className="text-sm text-canopy font-semibold">Admin</div>
+            <div className="font-mono text-caption text-muted">
+              {DEV_ADMIN.email} · {DEV_ADMIN.password}
+            </div>
+          </button>
+        </div>
       </div>
       <div className="text-body text-muted mt-7">
         <Link href="/login" className="font-semibold">
