@@ -19,7 +19,10 @@ export function AuthShell({
 }) {
   return (
     <div className="grid h-screen grid-cols-[repeat(auto-fit,minmax(min(300px,100%),1fr))] auto-rows-[100%] overflow-hidden">
-      <div className="gg-scroll p-auth mx-auto box-border flex h-full w-full max-w-auth-form flex-col justify-center overflow-y-auto">
+      {/* min-w-0: grid items default to min-width:auto and won't shrink below
+          fixed-width children (the 320px tabs), which ate the right padding
+          on phones and clipped "Claim your device". */}
+      <div className="gg-scroll p-auth mx-auto box-border flex h-full w-full min-w-0 max-w-auth-form flex-col justify-center overflow-y-auto">
         <div className="mb-10">
           {admin ? (
             <Logo size="marketing" href={logoHref} withAdminBadge asLink={false} />
@@ -30,7 +33,7 @@ export function AuthShell({
         {children}
       </div>
 
-      <div className="bg-canopy relative overflow-hidden">
+      <div className="bg-canopy relative min-w-0 overflow-hidden">
         <Image
           src="/login-greenhouse.jpg"
           alt=""

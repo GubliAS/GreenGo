@@ -92,9 +92,9 @@ export function LoginClaimFlow() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ phone: loginPhone, password: loginPassword }),
       });
-      const data = await res.json();
-      if (!res.ok || !data.ok) {
-        setLoginError(data.error || "Incorrect phone number or password.");
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data?.ok) {
+        setLoginError(data?.error || "Incorrect phone number or password.");
         return;
       }
       router.push("/devices");
@@ -141,7 +141,7 @@ export function LoginClaimFlow() {
 
   return (
     <>
-      <div className="mb-7 w-80">
+      <div className="mb-7 w-full max-w-80">
         <SlidingTabs
           ariaLabel="Log in or claim your device"
           value={mode}
@@ -164,8 +164,9 @@ export function LoginClaimFlow() {
             </p>
             <div className="flex flex-col gap-4">
               {/* Handoff sets this one field to a fixed 220px, unlike every
-                  other field in the flow which is 100% width. */}
-              <div className="w-55">
+                  other field in the flow which is 100% width. Cap at the
+                  column so it never eats the auth padding on narrow phones. */}
+              <div className="w-55 max-w-full">
                 <FormField
                   label="Phone number"
                   type="tel"
@@ -199,6 +200,37 @@ export function LoginClaimFlow() {
               >
                 {loginBusy ? "Logging in…" : "Log in"}
               </Button>
+              {/* Temporary seed helpers — remove before production. */}
+              <div className="border-line mt-2 rounded-input border border-dashed px-3.5 py-3">
+                <div className="text-micro tracking-widest text-faint mb-2 uppercase">
+                  Test logins
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setLoginPhone("0241234501");
+                      setLoginPassword("dev-tenant-password");
+                      setLoginError("");
+                    }}
+                    className="hover:bg-mint cursor-pointer rounded-sm border-0 bg-transparent px-2 py-1.5 text-left transition-colors"
+                  >
+                    <div className="text-sm text-canopy font-semibold">Tenant</div>
+                    <div className="font-mono text-caption text-muted">
+                      0241234501 · dev-tenant-password
+                    </div>
+                  </button>
+                  <Link
+                    href="/admin/login?demo=1"
+                    className="hover:bg-mint block rounded-sm px-2 py-1.5 no-underline transition-colors"
+                  >
+                    <div className="text-sm text-canopy font-semibold">Admin →</div>
+                    <div className="font-mono text-caption text-muted">
+                      ops@greengo.dev · dev-admin-password
+                    </div>
+                  </Link>
+                </div>
+              </div>
             </div>
           </div>
         )}

@@ -17,7 +17,9 @@ import type { ReactNode } from "react";
 
 export type Option<T extends string> = { value: T; label: string };
 
-/** 1. Sliding-pill tabs — two options only, pill width is calc(50% - 5px). */
+/** 1. Sliding-pill tabs — two options only, pill width is calc(50% - 5px).
+ *  Caps at `width` (handoff: 320) but fills the form column below that so
+ *  "Claim your device" isn't clipped on narrow phones. */
 export function SlidingTabs<T extends string>({
   options,
   value,
@@ -37,8 +39,8 @@ export function SlidingTabs<T extends string>({
     <div
       role="tablist"
       aria-label={ariaLabel}
-      className="bg-stone rounded-menu relative grid grid-cols-2 p-1.25"
-      style={{ width }}
+      className="bg-stone rounded-menu relative grid w-full grid-cols-2 p-1.25"
+      style={{ maxWidth: width }}
     >
       <div
         aria-hidden="true"
@@ -62,8 +64,9 @@ export function SlidingTabs<T extends string>({
                form), and the handoff's own README states "Touch targets are
                ≥44px on all primary buttons/inputs" — the explicit numeric
                requirement wins over the un-checked pixel value, same
-               reasoning as DEV-001. Visual padding/font untouched. */
-            className={`rounded-pill-sm text-sm relative z-1 flex min-h-11 cursor-pointer items-center justify-center border-0 bg-transparent px-2.5 py-2.25 font-semibold whitespace-nowrap transition-colors duration-250 ${
+               reasoning as DEV-001. On narrow viewports, slightly tighter
+               type/padding keeps "Claim your device" inside the pill. */
+            className={`rounded-pill-sm relative z-1 flex min-h-11 cursor-pointer items-center justify-center border-0 bg-transparent px-1.5 py-2.25 text-[13px] leading-snug font-semibold transition-colors duration-250 sm:px-2.5 sm:text-sm sm:whitespace-nowrap ${
               active ? "text-canopy" : "text-muted"
             }`}
           >
