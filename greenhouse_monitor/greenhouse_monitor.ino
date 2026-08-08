@@ -39,13 +39,13 @@ const bool CALIBRATION_MODE = false;
 // PC Wi‑Fi address from `ipconfig` / Next.js "Network:" line.
 // Must be the same LAN as this ESP32 (not a VirtualBox host-only IP).
 const char *WIFI_SSID     = "b6g";
-const char *WIFI_PASSWORD = "ukch8599";
+const char *WIFI_PASSWORD = "ukcg8599";
 const char *SERVER_HOST   = "172.17.230.163";
 const uint16_t SERVER_PORT = 3000;
 
 // Paste the one-time key from Admin → Provision device (starts with ggk_).
 // Leave empty to run sensors/LCD offline (no HTTP posts).
-const char *DEVICE_API_KEY = "";
+const char *DEVICE_API_KEY = "ggk_8c805f31a87a045fd093ae0f2c9fbe5f";
 
 // MAC is taken from the chip at runtime (WiFi.macAddress()).
 // Provision THAT MAC in the admin UI — do not invent one.
@@ -74,9 +74,9 @@ const float LIGHT_PCT_TO_LUX = 100.0f;  // 100% → 10000 lx
 
 // ==================== CALIBRATION =======================
 // Capacitive sensor: DRY reads HIGH, WET reads LOW.
-const int SOIL_DRY_RAW   = 3300;   // probe in open air
-const int SOIL_WET_RAW   = 2400;   // probe in water, up to the mark
-const int LDR_DARK_RAW   = 2150;   // LDR covered with your thumb
+const int SOIL_DRY_RAW   = 2930;   // probe in open air
+const int SOIL_WET_RAW   = 2200;   // probe in water, up to the mark
+const int LDR_DARK_RAW   = 1000;   // LDR covered with your thumb
 const int LDR_BRIGHT_RAW = 4095;   // LDR under your demo lighting
 
 // ====================== BEHAVIOUR =======================

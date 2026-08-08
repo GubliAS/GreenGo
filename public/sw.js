@@ -11,7 +11,7 @@
  * on a flaky 3G connection or briefly offline.
  */
 
-const CACHE_NAME = "greengo-v1";
+const CACHE_NAME = "greengo-v2";
 const OFFLINE_URL = "/offline";
 
 self.addEventListener("install", (event) => {
