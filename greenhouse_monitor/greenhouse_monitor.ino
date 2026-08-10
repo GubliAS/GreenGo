@@ -28,6 +28,7 @@
 #include <LiquidCrystal_I2C.h>
 #include <DHT.h>
 #include <WiFi.h>
+#include <WiFiClientSecure.h>
 #include <HTTPClient.h>
 
 // ========================= MODE =========================
@@ -36,14 +37,12 @@
 const bool CALIBRATION_MODE = false;
 
 // ===================== WIFI / CLOUD =====================
-// PC Wi‑Fi address from `ipconfig` / Next.js "Network:" line.
-// Must be the same LAN as this ESP32 (not a VirtualBox host-only IP).
 const char *WIFI_SSID     = "b6g";
 const char *WIFI_PASSWORD = "ukcg8599";
-// Use the PC's Wi‑Fi IPv4 from `ipconfig` (Interface "Wi-Fi"), NOT the
-// 192.168.56.x VirtualBox/Hyper-V address Next.js often prints as "Network:".
-const char *SERVER_HOST   = "10.115.179.163";
-const uint16_t SERVER_PORT = 3000;
+
+// Deployed GreenGo app (Vercel). HTTPS, no port.
+const char *SERVER_HOST   = "green-go-nine.vercel.app";
+const bool  SERVER_HTTPS  = true;
 
 // Paste the one-time key from Admin → Provision device (starts with ggk_).
 // Leave empty to run sensors/LCD offline (no HTTP posts).
@@ -303,11 +302,21 @@ void postTelemetry() {
            rssi,
            BATTERY_V_FIXED);
 
-  String url = String("http://") + SERVER_HOST + ":" + SERVER_PORT + "/api/telemetry";
+  String url = String(SERVER_HTTPS ? "https://" : "http://") + SERVER_HOST + "/api/telemetry";
 
+  WiFiClientSecure secureClient;
   HTTPClient http;
-  http.setTimeout(5000);
-  http.begin(url);
+  http.setTimeout(8000);
+
+  if (SERVER_HTTPS) {
+    // Vercel uses a public CA; for the class demo we skip chain verify so the
+    // board doesn't need a bundled root-cert store. Tighten this for production.
+    secureClient.setInsecure();
+    http.begin(secureClient, url);
+  } else {
+    http.begin(url);
+  }
+
   http.addHeader("Content-Type", "application/json");
   http.addHeader("X-Device-Mac", deviceMac);
   http.addHeader("X-Device-Api-Key", DEVICE_API_KEY);
@@ -417,7 +426,8 @@ void setup() {
     if (!apiKeyConfigured()) {
       Serial.println("DEVICE_API_KEY is empty — local sensors/LCD only until you set it.");
     }
-    Serial.printf("Telemetry URL: http://%s:%u/api/telemetry\n", SERVER_HOST, SERVER_PORT);
+    Serial.printf("Telemetry URL: %s://%s/api/telemetry\n",
+                  SERVER_HTTPS ? "https" : "http", SERVER_HOST);
     Serial.println("=========================================");
     delay(3500);
   }
