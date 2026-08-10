@@ -12,6 +12,7 @@ export const MOCK_ADMIN_DEVICE = {
   label: "Greenhouse 1",
   mac: "A4:CF:12:8E:3B:01",
   claimCode: "GG-4F82-K1",
+  claimStatus: "claimed" as const,
   firmware: "v1.4.2",
   uptime: "46d 3h",
   signalDbm: -62,
