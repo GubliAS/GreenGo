@@ -40,7 +40,7 @@ export default async function AdminDevicesListPage() {
       status,
       lastSeen: d.lastSeenAt ? `${relativeSeconds(d.lastSeenAt)} ago` : "never",
       firmware: d.firmware,
-      href: d.tenantId ? `/admin/devices/${d.id}` : "/admin/devices/provision",
+      href: `/admin/devices/${d.id}`,
     };
   });
 

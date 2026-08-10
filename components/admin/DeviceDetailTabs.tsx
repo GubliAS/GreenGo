@@ -35,16 +35,7 @@ export function DeviceDetailTabs({
    * the top bar row, not above the tabs) — this component only reads it to
    * decide whether destructive controls exist in the DOM at all. */
   role: AdminRole;
-  device: {
-    mac: string;
-    claimCode: string;
-    firmware: string;
-    uptime: string;
-    signalDbm: number;
-    batteryV: number;
-    tenantName: string;
-    claimedLabel: string;
-  };
+  device: DeviceDetailTabsDevice;
 }) {
   const [tab, setTab] = useState<Tab>("identity");
   const canDestroy = role === "super_admin";
@@ -83,8 +74,8 @@ function IdentityTab({
           value={
             <>
               {device.claimCode}{" "}
-              <StatusPill tone="mint" size="xs" >
-                Claimed
+              <StatusPill tone={device.claimStatus === "claimed" ? "mint" : "warn"} size="xs">
+                {device.claimStatus === "claimed" ? "Claimed" : "Unclaimed"}
               </StatusPill>
             </>
           }
@@ -216,6 +207,7 @@ function TenantBindingTab({
 }) {
   const [confirm, setConfirm] = useState("");
   const disabled = confirm !== device.tenantName;
+  const unclaimed = device.claimStatus === "unclaimed";
 
   return (
     <div className="flex flex-col gap-3.5">
@@ -227,31 +219,46 @@ function TenantBindingTab({
         </div>
       </Card>
 
-      {canDestroy && (
-        <Card className="flex flex-col gap-3.5">
-          <div className="text-base text-danger font-bold">Destructive actions</div>
-          <div className="flex flex-col gap-2.5">
-            <div className="text-meta text-muted">
-              Unclaiming removes this device from {device.tenantName}&apos;s
-              dashboard immediately. Type the tenant&apos;s name to confirm.
-            </div>
-            <div className="flex gap-2.5">
-              <input
-                type="text"
-                placeholder={`Type ${device.tenantName} to confirm`}
-                value={confirm}
-                onChange={(e) => setConfirm(e.target.value)}
-                className="border-hair border-line rounded-sm box-border flex-1 px-3 py-2.25 text-sm"
-              />
-              <Button variant="destructive" size="sm" disabled={disabled} className="whitespace-nowrap">
-                Unclaim device
-              </Button>
-            </div>
-            <button className="text-sm self-start cursor-pointer border-0 bg-transparent font-semibold">
-              Transfer to another tenant
-            </button>
+      {unclaimed ? (
+        <Card className="flex flex-col gap-3">
+          <div className="text-base text-canopy font-bold">How to claim this device</div>
+          <p className="text-meta text-muted m-0">
+            Admins don&apos;t assign devices directly. Give the farmer this claim
+            code. They enter it on <span className="font-semibold text-ink">Login → Claim your device</span>{" "}
+            (new account) or <span className="font-semibold text-ink">Devices → Add a device</span>{" "}
+            (existing account). That binds the greenhouse to their tenant.
+          </p>
+          <div className="bg-mint rounded-sm font-mono text-xl text-canopy px-3.5 py-3 tracking-wider">
+            {device.claimCode}
           </div>
         </Card>
+      ) : (
+        canDestroy && (
+          <Card className="flex flex-col gap-3.5">
+            <div className="text-base text-danger font-bold">Destructive actions</div>
+            <div className="flex flex-col gap-2.5">
+              <div className="text-meta text-muted">
+                Unclaiming removes this device from {device.tenantName}&apos;s
+                dashboard immediately. Type the tenant&apos;s name to confirm.
+              </div>
+              <div className="flex gap-2.5">
+                <input
+                  type="text"
+                  placeholder={`Type ${device.tenantName} to confirm`}
+                  value={confirm}
+                  onChange={(e) => setConfirm(e.target.value)}
+                  className="border-hair border-line rounded-sm box-border flex-1 px-3 py-2.25 text-sm"
+                />
+                <Button variant="destructive" size="sm" disabled={disabled} className="whitespace-nowrap">
+                  Unclaim device
+                </Button>
+              </div>
+              <button className="text-sm self-start cursor-pointer border-0 bg-transparent font-semibold">
+                Transfer to another tenant
+              </button>
+            </div>
+          </Card>
+        )
       )}
     </div>
   );
@@ -348,6 +355,7 @@ function Field({ label, value }: { label: string; value: React.ReactNode }) {
 type DeviceDetailTabsDevice = {
   mac: string;
   claimCode: string;
+  claimStatus: "claimed" | "unclaimed";
   firmware: string;
   uptime: string;
   signalDbm: number;

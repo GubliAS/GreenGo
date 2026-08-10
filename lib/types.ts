@@ -130,8 +130,13 @@ export interface Reading {
 /** Exactly what the ESP32 POSTs to /api/telemetry. */
 export interface TelemetryPayload {
   soilRaw: number;
+  /** Optional — when present, preferred over server-side calibration mapping.
+   *  Lets capacitive firmware report the same % shown on the LCD. */
+  soilPct?: number;
   tempC?: number;
   humidityPct?: number;
+  /** Provisional on this hardware (an LDR). Stored as 0–100 percent for the
+   *  current board; the dashboard labels it "%", not lux. */
   lightLux?: number;
   relayOn: boolean;
   mode: PumpMode;

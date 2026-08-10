@@ -26,6 +26,7 @@ import type { PumpMode } from "@prisma/client";
 
 type TelemetryBody = {
   soilRaw: number;
+  soilPct?: number;
   tempC?: number;
   humidityPct?: number;
   lightLux?: number;
@@ -41,6 +42,7 @@ function isValidBody(body: unknown): body is TelemetryBody {
   if (typeof b.soilRaw !== "number") return false;
   if (typeof b.relayOn !== "boolean") return false;
   if (b.mode !== "AUTO" && b.mode !== "MANUAL") return false;
+  if (b.soilPct !== undefined && typeof b.soilPct !== "number") return false;
   if (b.tempC !== undefined && typeof b.tempC !== "number") return false;
   if (b.humidityPct !== undefined && typeof b.humidityPct !== "number") return false;
   if (b.lightLux !== undefined && typeof b.lightLux !== "number") return false;
@@ -74,7 +76,12 @@ export async function POST(request: Request) {
   const now = new Date();
 
   const calibration = await db.calibration.findUnique({ where: { deviceId: device.id } });
-  const soilPct = soilRawToPercent(body.soilRaw, calibration);
+  // Prefer the device's own % (matches the LCD) when provided; otherwise map
+  // soilRaw through the tenant's dry/wet calibration endpoints.
+  const soilPct =
+    typeof body.soilPct === "number"
+      ? Math.max(0, Math.min(100, Math.round(body.soilPct)))
+      : soilRawToPercent(body.soilRaw, calibration);
 
   const reading = await db.reading.create({
     data: {

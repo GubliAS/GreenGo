@@ -1,11 +1,11 @@
 import type { NextConfig } from "next";
-import path from "path";
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
-  // Avoid picking up a parent package-lock.json (e.g. in the user home dir).
+  // Pin the workspace root so a parent package-lock.json (e.g. in the user
+  // home dir) does not become Turbopack's inferred root and break routing.
   turbopack: {
-    root: path.join(__dirname),
+    root: process.cwd(),
   },
   // Users are on Android over 3G — keep payloads small and images modern.
   images: {

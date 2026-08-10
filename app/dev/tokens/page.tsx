@@ -917,7 +917,7 @@ function ComponentSection() {
               <MetricReadout
                 label="Light"
                 value={demo === "unknown" ? "—" : "820"}
-                unit={demo === "unknown" ? "" : " lx"}
+                unit={demo === "unknown" ? "" : "%"}
               />
               <MetricReadout label="Battery" value={demo === "unknown" ? "3.4" : "3.9"} unit="V" />
             </div>

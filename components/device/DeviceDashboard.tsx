@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { BackLink, Card, PageTitle } from "../ui/Card";
 import { AlertBanner } from "../ui/AlertBanner";
@@ -14,20 +14,21 @@ import { describeMoisture } from "@/lib/moisture";
 import type { DeviceState, PumpMode } from "@/lib/types";
 
 /* Device dashboard → /devices/[id] · source: GreenGo Device Dashboard.dc.html
- * Spec: handoff/tenant.md §2. The reference screen — all three device states
- * designed.
+ * Spec: handoff/tenant.md §2.
  *
- * Phase 4B: the page wrapper fetches the real device (ownership-checked
- * against the session) and passes its actual state down as `initial*` props.
- * The 3-state switcher stays — it is a designed showcase control in the
- * handoff itself (the "demoState/liveState switcher" the README calls out),
- * not Phase-2 scaffolding — but it now starts from the device's REAL derived
- * state instead of a hardcoded "confirmed". The pump button, when the real
- * state is confirmed, calls the real POST /api/devices/[id]/pump endpoint;
- * switching the demo control to pending/unknown previews those states
- * without touching the backend, exactly as the handoff's own switcher does. */
+ * Live values: short polling (5s) against GET /api/devices/[id]/live. The ESP
+ * posts every ~10s; polling is simpler and more reliable on serverless than
+ * SSE, and matches that cadence without holding open streams. */
 
 const RANGES = ["12h", "24h", "48h", "Week", "Month"] as const;
+const POLL_MS = 5000;
+
+type LiveMetrics = {
+  tempC: number | null;
+  humidityPct: number | null;
+  lightLux: number | null;
+  batteryV: number | null;
+};
 
 function buildChartPoints(seed: number[]): number[] {
   if (seed.length > 0) return seed;
@@ -54,24 +55,78 @@ export function DeviceDashboard({
   initialPercent?: number;
   initialRelayOn?: boolean;
   initialMode?: PumpMode;
-  initialMetrics?: {
-    tempC: number | null;
-    humidityPct: number | null;
-    lightLux: number | null;
-    batteryV: number | null;
-  };
+  initialMetrics?: LiveMetrics;
   lastSeenLabel?: string;
   chartSeed?: number[];
 }) {
   const toast = useToast();
-  const [state, setState] = useState<DeviceState>(initialState);
+  const [demoState, setDemoState] = useState<DeviceState | null>(null);
+  const [liveState, setLiveState] = useState<DeviceState>(initialState);
+  const [percent, setPercent] = useState(initialPercent);
   const [range, setRange] = useState<(typeof RANGES)[number]>("24h");
   const [relayOn, setRelayOn] = useState(initialRelayOn);
+  const [mode, setMode] = useState<PumpMode>(initialMode);
+  const [metrics, setMetrics] = useState<LiveMetrics>(initialMetrics);
+  const [seenLabel, setSeenLabel] = useState(lastSeenLabel);
+  const [chartPoints, setChartPoints] = useState(() => buildChartPoints(chartSeed));
   const [busy, setBusy] = useState(false);
+  const [pendingUntil, setPendingUntil] = useState<number | null>(null);
 
+  const state: DeviceState =
+    pendingUntil && Date.now() < pendingUntil
+      ? "pending"
+      : (demoState ?? liveState);
   const isUnknown = state === "unknown";
-  const percent = isUnknown ? initialPercent : initialPercent;
-  const chartPoints = buildChartPoints(chartSeed);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function poll() {
+      try {
+        const res = await fetch(`/api/devices/${deviceId}/live`, { cache: "no-store" });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (cancelled || !data.ok) return;
+
+        setLiveState(data.state as DeviceState);
+        if (typeof data.soilPct === "number") setPercent(data.soilPct);
+        setRelayOn(!!data.relayOn);
+        setMode(data.mode as PumpMode);
+        setMetrics(data.metrics as LiveMetrics);
+        setSeenLabel(data.lastSeenLabel as string);
+        if (Array.isArray(data.chartSeed)) {
+          setChartPoints(buildChartPoints(data.chartSeed as number[]));
+        }
+
+        // Clear optimistic pending once the live relay matches, or timeout.
+        setPendingUntil((until) => {
+          if (!until) return null;
+          if (Date.now() >= until) return null;
+          return until;
+        });
+      } catch {
+        // Keep last good snapshot on transient network blips.
+      }
+    }
+
+    poll();
+    const id = window.setInterval(poll, POLL_MS);
+    return () => {
+      cancelled = true;
+      window.clearInterval(id);
+    };
+  }, [deviceId]);
+
+  useEffect(() => {
+    if (!pendingUntil) return;
+    const remaining = pendingUntil - Date.now();
+    if (remaining <= 0) {
+      setPendingUntil(null);
+      return;
+    }
+    const t = window.setTimeout(() => setPendingUntil(null), remaining);
+    return () => window.clearTimeout(t);
+  }, [pendingUntil]);
 
   async function handleToggle() {
     setBusy(true);
@@ -87,15 +142,13 @@ export function DeviceDashboard({
         toast.push({ tone: "danger", title: "Pump command failed", body: data.error });
         return;
       }
-      setState("pending");
-      setTimeout(() => {
-        setRelayOn(action === "PUMP_ON");
-        setState("confirmed");
-        toast.push({
-          tone: "success",
-          title: action === "PUMP_ON" ? "Pump turned on" : "Pump turned off",
-        });
-      }, 2500);
+      setDemoState(null);
+      setPendingUntil(Date.now() + 15000);
+      toast.push({
+        tone: "success",
+        title: "Command queued",
+        body: "Waiting for the device to check in (~10s).",
+      });
     } finally {
       setBusy(false);
     }
@@ -111,7 +164,10 @@ export function DeviceDashboard({
         <StateSwitcher
           ariaLabel="Device state (demo)"
           value={state}
-          onChange={setState}
+          onChange={(v) => {
+            setDemoState(v);
+            setPendingUntil(null);
+          }}
           options={[
             { value: "confirmed", label: "Confirmed" },
             { value: "pending", label: "Pending" },
@@ -165,7 +221,7 @@ export function DeviceDashboard({
           />
 
           <div className="text-meta text-muted">
-            {isUnknown ? "Last reading 4 min ago — treat as stale" : lastSeenLabel}
+            {isUnknown ? "Last reading 4 min ago — treat as stale" : seenLabel}
           </div>
 
           <div className="border-hairline flex flex-col gap-3.5 border-t pt-4.5">
@@ -192,7 +248,7 @@ export function DeviceDashboard({
         <div className="flex flex-col gap-3.5">
           <PumpControl
             state={busy ? "pending" : state}
-            mode={initialMode}
+            mode={mode}
             relayOn={relayOn}
             onToggle={handleToggle}
           />
@@ -200,23 +256,23 @@ export function DeviceDashboard({
           <Card variant="compact" className="grid grid-cols-[repeat(auto-fit,minmax(min(130px,100%),1fr))] gap-3.5">
             <MetricReadout
               label="Air temp"
-              value={isUnknown || initialMetrics.tempC === null ? "—" : initialMetrics.tempC}
-              unit={isUnknown || initialMetrics.tempC === null ? "" : "°C"}
+              value={isUnknown || metrics.tempC === null ? "—" : metrics.tempC}
+              unit={isUnknown || metrics.tempC === null ? "" : "°C"}
             />
             <MetricReadout
               label="Humidity"
-              value={isUnknown || initialMetrics.humidityPct === null ? "—" : initialMetrics.humidityPct}
-              unit={isUnknown || initialMetrics.humidityPct === null ? "" : "%"}
+              value={isUnknown || metrics.humidityPct === null ? "—" : metrics.humidityPct}
+              unit={isUnknown || metrics.humidityPct === null ? "" : "%"}
             />
             <MetricReadout
               label="Light"
-              value={isUnknown || initialMetrics.lightLux === null ? "—" : initialMetrics.lightLux}
-              unit={isUnknown || initialMetrics.lightLux === null ? "" : " lx"}
+              value={isUnknown || metrics.lightLux === null ? "—" : metrics.lightLux}
+              unit={isUnknown || metrics.lightLux === null ? "" : "%"}
             />
             <MetricReadout
               label="Battery"
-              value={initialMetrics.batteryV ?? "—"}
-              unit={initialMetrics.batteryV !== null ? "V" : ""}
+              value={metrics.batteryV ?? "—"}
+              unit={metrics.batteryV !== null ? "V" : ""}
             />
           </Card>
         </div>

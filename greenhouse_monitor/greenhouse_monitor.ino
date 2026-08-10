@@ -40,7 +40,9 @@ const bool CALIBRATION_MODE = false;
 // Must be the same LAN as this ESP32 (not a VirtualBox host-only IP).
 const char *WIFI_SSID     = "b6g";
 const char *WIFI_PASSWORD = "ukcg8599";
-const char *SERVER_HOST   = "172.17.230.163";
+// Use the PC's Wi‑Fi IPv4 from `ipconfig` (Interface "Wi-Fi"), NOT the
+// 192.168.56.x VirtualBox/Hyper-V address Next.js often prints as "Network:".
+const char *SERVER_HOST   = "10.115.179.163";
 const uint16_t SERVER_PORT = 3000;
 
 // Paste the one-time key from Admin → Provision device (starts with ggk_).
@@ -69,12 +71,10 @@ const unsigned long REMOTE_OFF_HOLD_MS  = 15000; // keep PUMP_OFF long enough to
 // already comes back in whole percent.
 const float TEMP_SCALE = 10.0;
 
-// LDR % → provisional lux for the app (no calibrated lux sensor).
-const float LIGHT_PCT_TO_LUX = 100.0f;  // 100% → 10000 lx
-
+// LDR % is sent to the app as-is (dashboard shows "%", not lux).
 // ==================== CALIBRATION =======================
 // Capacitive sensor: DRY reads HIGH, WET reads LOW.
-const int SOIL_DRY_RAW   = 2930;   // probe in open air
+const int SOIL_DRY_RAW   = 2730;   // probe in open air
 const int SOIL_WET_RAW   = 2200;   // probe in water, up to the mark
 const int LDR_DARK_RAW   = 1000;   // LDR covered with your thumb
 const int LDR_BRIGHT_RAW = 4095;   // LDR under your demo lighting
@@ -284,19 +284,21 @@ void postTelemetry() {
 
   float tempOut = isnan(temperatureC) ? 0.0f : temperatureC;
   float humOut  = isnan(humidity)     ? 0.0f : humidity;
-  long  luxOut  = (long)(lightPercent * LIGHT_PCT_TO_LUX);
   int   rssi    = WiFi.RSSI();
 
   // Always AUTO for this demo build (no physical mode switch yet).
-  char payload[320];
+  // soilPct + lightLux(=LDR %) match the LCD so the dashboard doesn't
+  // depend on server-side dry/wet calibration matching this capacitive probe.
+  char payload[360];
   snprintf(payload, sizeof(payload),
-           "{\"soilRaw\":%d,\"tempC\":%.1f,\"humidityPct\":%.0f,"
-           "\"lightLux\":%ld,\"relayOn\":%s,\"mode\":\"AUTO\","
+           "{\"soilRaw\":%d,\"soilPct\":%d,\"tempC\":%.1f,\"humidityPct\":%.0f,"
+           "\"lightLux\":%d,\"relayOn\":%s,\"mode\":\"AUTO\","
            "\"signalDbm\":%d,\"batteryV\":%.1f}",
            soilRaw,
+           soilPercent,
            tempOut,
            humOut,
-           luxOut,
+           lightPercent,
            relayOn ? "true" : "false",
            rssi,
            BATTERY_V_FIXED);
