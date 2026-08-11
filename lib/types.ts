@@ -64,6 +64,8 @@ export interface Device {
   /** Immutable hardware identity. Never reassigned. */
   mac: string;
   label: string | null;
+  /** Human-readable public URL key (/devices/[slug]). */
+  slug: string;
   /** null until a claim code is redeemed. Read from the session, never from a
    *  request parameter, for any tenant-scoped query. */
   tenantId: string | null;

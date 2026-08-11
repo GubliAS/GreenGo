@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { HTMLAttributes, ReactNode } from "react";
 
 /* The handoff's card shell, which recurs on nearly every app/admin screen:
  *   bg-white · 1.5px --color-hairline border · --radius-card (20px) · 26px pad
@@ -13,11 +13,12 @@ export function Card({
   variant = "default",
   className = "",
   children,
+  ...rest
 }: {
   variant?: "default" | "compact" | "hero" | "flat";
   className?: string;
   children: ReactNode;
-}) {
+} & HTMLAttributes<HTMLDivElement>) {
   const styles = {
     default: "border-hair border-hairline rounded-card bg-white p-6.5",
     compact: "border-hair border-hairline rounded-card bg-white p-5.5",
@@ -25,7 +26,11 @@ export function Card({
     flat: "rounded-card bg-white p-6.5",
   } as const;
 
-  return <div className={`${styles[variant]} ${className}`}>{children}</div>;
+  return (
+    <div className={`${styles[variant]} ${className}`} {...rest}>
+      {children}
+    </div>
+  );
 }
 
 /** Section heading inside a card — 14.5px bold canopy. */

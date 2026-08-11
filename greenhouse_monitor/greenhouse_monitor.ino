@@ -53,7 +53,7 @@ const char *DEVICE_API_KEY = "ggk_8c805f31a87a045fd093ae0f2c9fbe5f";
 
 const unsigned long TELEMETRY_PERIOD_MS = 10000;
 const unsigned long WIFI_RETRY_MS       = 15000;
-const float         BATTERY_V_FIXED     = 3.7f;  // no battery ADC on this board
+const float         BATTERY_V_FIXED     = 3.7f;  // no battery ADC on this board n
 const unsigned long REMOTE_OFF_HOLD_MS  = 15000; // keep PUMP_OFF long enough to confirm
 
 // ========================= PINS =========================

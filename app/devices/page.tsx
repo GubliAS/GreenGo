@@ -39,15 +39,15 @@ export default async function DevicesListPage() {
     <div className="min-h-screen">
       <AppTopBar active="devices" />
 
-      <div className="p-devices-page">
-        <div className="mb-6 flex flex-wrap items-baseline justify-between gap-3">
+      <div className="p-devices-page pb-[max(1.5rem,env(safe-area-inset-bottom))]">
+        <div className="mb-5 flex flex-wrap items-baseline justify-between gap-2 sm:mb-6 sm:gap-3">
           <PageTitle size="lg">Your greenhouses</PageTitle>
           <div className="text-body text-muted">
             {devices.length} device{devices.length === 1 ? "" : "s"}
           </div>
         </div>
 
-        <div className="max-w-app grid grid-cols-[repeat(auto-fit,minmax(min(300px,100%),1fr))] gap-4.5">
+        <div className="max-w-app grid grid-cols-1 gap-3.5 sm:grid-cols-[repeat(auto-fit,minmax(min(280px,100%),1fr))] sm:gap-4.5">
           {devices.map((device, i) => {
             const reading = latestByDevice[i];
             const percent = reading?.soilPct ?? 0;
@@ -59,15 +59,17 @@ export default async function DevicesListPage() {
             return (
               <Link
                 key={device.id}
-                href={`/devices/${device.id}`}
-                className="border-hair border-hairline rounded-card flex flex-col gap-4 bg-white p-6 text-inherit"
+                href={`/devices/${device.slug}`}
+                data-gg-anim="1"
+                className="animate-rise border-hair border-hairline rounded-card flex flex-col gap-3.5 bg-white p-5 text-inherit transition-transform active:scale-[0.99] sm:gap-4 sm:p-6"
+                style={{ animationDelay: `${Math.min(i, 4) * 40}ms` }}
               >
-                <div className="flex items-start justify-between">
-                  <div>
-                    <div className="text-xl text-canopy mb-1 font-bold">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="text-xl text-canopy mb-1 truncate font-bold">
                       {device.label ?? device.mac}
                     </div>
-                    <div className="text-meta text-muted">{device.mac}</div>
+                    <div className="text-meta text-muted truncate">{device.mac}</div>
                   </div>
                   <StatusPill tone={isOnline ? "mint" : "stone"} dot size="md">
                     {isOnline ? "Online" : "Offline"}
@@ -76,11 +78,9 @@ export default async function DevicesListPage() {
 
                 <SegmentedBar percent={percent} count={16} height={24} surface="app" radius="sm" />
 
-                <div className="text-sm text-ink flex items-center justify-between">
-                  <span>
-                    Soil <strong className="font-mono text-canopy">{percent}%</strong> · last
-                    seen {lastSeen} ago
-                  </span>
+                <div className="text-sm text-ink leading-snug">
+                  Soil <strong className="font-mono text-canopy">{percent}%</strong>
+                  <span className="text-muted"> · last seen {lastSeen} ago</span>
                 </div>
               </Link>
             );
@@ -90,7 +90,10 @@ export default async function DevicesListPage() {
             title="Add a device"
             body="You already have an account — just enter the claim code for the next greenhouse."
             action={
-              <Link href="/devices/add" className="text-sm text-leaf font-semibold">
+              <Link
+                href="/devices/add"
+                className="text-sm text-leaf inline-flex min-h-11 items-center font-semibold"
+              >
                 I have a claim code
               </Link>
             }

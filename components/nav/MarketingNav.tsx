@@ -30,7 +30,7 @@ const LINKS: { href: string; label: string; id: MarketingPage }[] = [
 
 export function MarketingNav({
   active = null,
-  /** Swaps "Log in" for "Dashboard". Wired to the real session in Phase 4. */
+  /** Swaps "Log in" for "Dashboard" when the visitor has a tenant session. */
   loggedIn = false,
 }: {
   active?: MarketingPage;

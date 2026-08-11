@@ -55,13 +55,13 @@ export function NotificationsInbox() {
   const unreadCount = items.filter((i) => i.unread).length;
 
   return (
-    <div className="max-w-table mx-auto flex flex-col gap-4.5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+    <div className="max-w-table mx-auto flex flex-col gap-4 sm:gap-4.5">
+      <div className="flex flex-wrap items-center justify-between gap-2 sm:gap-3">
         <PageTitle>Notifications</PageTitle>
         {unreadCount > 0 && (
           <button
             onClick={() => setItems((prev) => prev.map((i) => ({ ...i, unread: false })))}
-            className="text-meta text-leaf cursor-pointer border-0 bg-transparent font-semibold"
+            className="text-meta text-leaf inline-flex min-h-11 cursor-pointer items-center border-0 bg-transparent px-1 font-semibold"
           >
             Mark all as read
           </button>
@@ -72,11 +72,11 @@ export function NotificationsInbox() {
         <EmptyState title="No notifications yet" body="Alerts and pump activity will show up here." />
       ) : (
         <>
-          <Card className="flex flex-col gap-0 p-0">
+          <Card className="flex flex-col gap-0 overflow-hidden p-0">
             {items.map((item, i) => (
               <div
                 key={item.id}
-                className={`flex items-start gap-3 px-6 py-4 ${
+                className={`flex items-start gap-3 px-4 py-3.5 sm:px-6 sm:py-4 ${
                   i > 0 ? "border-hairline-soft border-t" : ""
                 } ${item.unread ? "bg-mint" : ""}`}
               >
@@ -84,8 +84,8 @@ export function NotificationsInbox() {
                   className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${DOT[item.kind]}`}
                   aria-hidden="true"
                 />
-                <div className="flex-1">
-                  <div className="text-body text-canopy">{item.text}</div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-body text-canopy leading-snug">{item.text}</div>
                   <div className="text-label text-muted mt-0.5">{item.time}</div>
                 </div>
               </div>

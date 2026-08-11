@@ -4,6 +4,7 @@ import { MarketingFooter } from "@/components/nav/MarketingFooter";
 import { ButtonLink } from "@/components/ui/Button";
 import { Eyebrow } from "@/components/ui/Card";
 import { NumberedStep } from "@/components/ui/Feedback";
+import { isTenantLoggedIn } from "@/lib/marketing-session";
 
 /* How It Works → /how-it-works · source: GreenGo How It Works.dc.html
  * Spec: handoff/public.md §2. Copy verbatim. */
@@ -54,10 +55,11 @@ const HARDWARE: { lead: string; rest: string }[] = [
   },
 ];
 
-export default function HowItWorksPage() {
+export default async function HowItWorksPage() {
+  const loggedIn = await isTenantLoggedIn();
   return (
     <div className="max-w-marketing relative mx-auto">
-      <MarketingNav active="how-it-works" />
+      <MarketingNav active="how-it-works" loggedIn={loggedIn} />
 
       <section className="px-section-x pt-16 text-center">
         <div className="mb-3.5">

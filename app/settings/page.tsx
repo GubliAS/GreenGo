@@ -33,12 +33,12 @@ export default async function SettingsPage() {
   return (
     <div className="min-h-screen">
       <AppTopBar active="settings" />
-      <div className="p-page max-w-form mx-auto flex flex-col gap-4.5">
+      <div className="p-page max-w-form mx-auto flex flex-col gap-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:gap-4.5">
         <PageTitle>Settings</PageTitle>
 
         <Card className="flex flex-col gap-4">
           <CardTitle>Account</CardTitle>
-          <div className="grid grid-cols-[repeat(auto-fit,minmax(min(180px,100%),1fr))] gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-[repeat(auto-fit,minmax(min(180px,100%),1fr))]">
             <FormField label="Name" size="sm" defaultValue={user?.name} name="name" />
             <FormField
               label="Email or phone"
@@ -54,18 +54,18 @@ export default async function SettingsPage() {
         {device && (
           <Card className="flex flex-col gap-3.5">
             <CardTitle>Device</CardTitle>
-            <div className="bg-app rounded-tile flex items-center justify-between px-3.5 py-3">
-              <span className="text-body text-canopy">
+            <div className="bg-app rounded-tile flex flex-col gap-1.5 px-3.5 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+              <span className="text-body text-canopy break-words">
                 {device.label ?? device.mac}
                 {claimCode ? ` — claim code ${claimCode.code}` : ""}
               </span>
-              <span className="text-caption text-muted">
+              <span className="text-caption text-muted shrink-0">
                 {device.claimedAt ? `Claimed ${relativeDays(device.claimedAt)}` : "Unclaimed"}
               </span>
             </div>
             <Link
-              href={`/devices/${device.id}/calibration`}
-              className="text-sm self-start font-semibold"
+              href={`/devices/${device.slug}/calibration`}
+              className="text-sm inline-flex min-h-11 items-center self-start font-semibold"
             >
               Re-run calibration
             </Link>
@@ -83,11 +83,11 @@ export default async function SettingsPage() {
           />
         </Card>
 
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <Button variant="primary" size="form">
             Save changes
           </Button>
-          <LogoutLink className="text-sm text-danger font-semibold" />
+          <LogoutLink className="text-sm text-danger inline-flex min-h-11 items-center font-semibold" />
         </div>
       </div>
     </div>

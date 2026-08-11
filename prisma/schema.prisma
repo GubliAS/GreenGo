@@ -91,6 +91,8 @@ model Device {
   /// Immutable hardware identity. Never reassigned.
   mac           String    @unique
   label         String?
+  /// Human-readable public URL key (/devices/[slug]). Unique; not the PK.
+  slug          String    @unique
   tenantId      String?
   tenant        Tenant?   @relation(fields: [tenantId], references: [id])
   /// Argon2id hash of the device API key. The plaintext is returned to the

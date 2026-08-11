@@ -95,7 +95,7 @@ export function StateSwitcher<T extends string>({
     <div
       role="group"
       aria-label={ariaLabel}
-      className="border-hair border-line-soft rounded-menu flex gap-2 bg-white p-1.25"
+      className="border-hair border-line-soft rounded-menu flex w-max max-w-full gap-1.5 overflow-x-auto bg-white p-1.25 sm:gap-2"
     >
       {options.map((o) => {
         const active = o.value === value;
@@ -104,7 +104,7 @@ export function StateSwitcher<T extends string>({
             key={o.value}
             onClick={() => onChange(o.value)}
             aria-pressed={active}
-            className={`rounded-pill-sm text-meta cursor-pointer border-0 px-3.5 py-1.75 font-semibold ${
+            className={`rounded-pill-sm text-meta min-h-11 cursor-pointer border-0 px-3 py-2 font-semibold sm:min-h-0 sm:px-3.5 sm:py-1.75 ${
               active ? "bg-canopy text-white" : "text-muted bg-transparent"
             }`}
           >
@@ -166,7 +166,7 @@ export function RangePills<T extends string>({
   ariaLabel?: string;
 }) {
   return (
-    <div role="group" aria-label={ariaLabel} className="flex gap-1">
+    <div role="group" aria-label={ariaLabel} className="flex w-max gap-1">
       {options.map((o) => {
         const active = o.value === value;
         return (
@@ -174,7 +174,7 @@ export function RangePills<T extends string>({
             key={o.value}
             onClick={() => onChange(o.value)}
             aria-pressed={active}
-            className={`rounded-sm text-label cursor-pointer border-0 px-2.5 py-1.25 font-semibold ${
+            className={`rounded-sm text-label min-h-9 cursor-pointer border-0 px-2.5 py-1.5 font-semibold ${
               active ? "bg-mint text-canopy" : "text-muted bg-transparent"
             }`}
           >

@@ -1,35 +1,30 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
 import { AppTopBar } from "@/components/nav/AppTopBar";
 import { DeviceDashboard } from "@/components/device/DeviceDashboard";
 import { db, requireTenantId } from "@/lib/db";
 import { getSession } from "@/lib/session";
+import { resolveTenantDevice } from "@/lib/device-route";
 
-/* Device dashboard → /devices/[id] · source: GreenGo Device Dashboard.dc.html
+/* Device dashboard → /devices/[slug] · source: GreenGo Device Dashboard.dc.html
  * Spec: handoff/tenant.md §2.
  *
- * tenantId comes ONLY from the session (middleware.ts already guarantees a
- * tenant session exists for this route) — the device is looked up by BOTH
- * id and tenantId in one query, so a tenant guessing another tenant's device
- * id gets exactly the same "not found" as a nonexistent id. Never scope by
- * request parameter alone. */
+ * tenantId comes ONLY from the session. Public URL uses human-readable slug;
+ * internal cuid is used for API calls only. */
 
 export const metadata: Metadata = { title: "Device — GreenGo" };
-export const dynamic = "force-dynamic"; // live device + reading rows
+export const dynamic = "force-dynamic";
 
 const STALE_AFTER_SECONDS = Number(process.env.DEVICE_STALE_AFTER_SECONDS ?? 120);
 
 export default async function DeviceDashboardPage({
   params,
 }: {
-  params: Promise<{ id: string }>;
+  params: Promise<{ slug: string }>;
 }) {
-  const { id } = await params;
+  const { slug } = await params;
   const session = await getSession();
   const tenantId = requireTenantId(session?.kind === "tenant" ? session : null);
-
-  const device = await db.device.findFirst({ where: { id, tenantId } });
-  if (!device) notFound();
+  const device = await resolveTenantDevice(slug, tenantId);
 
   const latestReading = await db.reading.findFirst({
     where: { deviceId: device.id },
@@ -56,10 +51,11 @@ export default async function DeviceDashboardPage({
 
   return (
     <div className="min-h-screen">
-      <AppTopBar active="devices" />
+      <AppTopBar active="devices" deviceSlug={device.slug} />
       <div className="p-page">
         <DeviceDashboard
           deviceId={device.id}
+          deviceSlug={device.slug}
           deviceLabel={device.label ?? device.mac}
           initialState={isStale ? "unknown" : "confirmed"}
           initialPercent={latestReading?.soilPct ?? 0}

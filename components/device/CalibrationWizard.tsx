@@ -24,7 +24,13 @@ type Step = "dry" | "wet" | "confirm" | "done";
 const MOCK_LIVE_RAW_DRY = 615;
 const MOCK_LIVE_RAW_WET = 202;
 
-export function CalibrationWizard({ deviceLabel }: { deviceLabel: string }) {
+export function CalibrationWizard({
+  deviceLabel,
+  deviceSlug,
+}: {
+  deviceLabel: string;
+  deviceSlug: string;
+}) {
   const [step, setStep] = useState<Step>("dry");
   const [dryRaw, setDryRaw] = useState<number | null>(null);
   const [wetRaw, setWetRaw] = useState<number | null>(null);
@@ -44,7 +50,7 @@ export function CalibrationWizard({ deviceLabel }: { deviceLabel: string }) {
   return (
     <div className="flex flex-col gap-4.5">
       <div>
-        <BackLink href="/devices/gh-1">← {deviceLabel}</BackLink>
+        <BackLink href={`/devices/${deviceSlug}`}>← {deviceLabel}</BackLink>
         <PageTitle className="mt-1.5">Calibrate soil sensor</PageTitle>
       </div>
 

@@ -83,7 +83,7 @@ export function TenantDetailPage({ tenantName }: { tenantName: string }) {
               <div className="text-lg text-canopy font-semibold">Greenhouse 1</div>
               <div className="text-meta text-muted mt-0.5">A4:CF:12:8E:3B:01</div>
             </div>
-            <Link href="/admin/devices/gh-1" className="text-sm font-semibold">
+            <Link href="/admin/devices" className="text-sm font-semibold">
               View device →
             </Link>
           </Card>

@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
-import { notFound, redirect } from "next/navigation";
+import { redirect } from "next/navigation";
 import { AdminTopBar } from "@/components/nav/AdminTopBar";
 import { BackLink, PageTitle } from "@/components/ui/Card";
 import { DeviceDetailTabs } from "@/components/admin/DeviceDetailTabs";
 import { db } from "@/lib/db";
 import { getSession } from "@/lib/session";
+import { resolveAdminDevice } from "@/lib/device-route";
 
-/* Admin Device Detail → /admin/devices/[id] · source: GreenGo Admin Device Detail.dc.html
+/* Admin Device Detail → /admin/devices/[slug] · source: GreenGo Admin Device Detail.dc.html
  * Spec: handoff/admin.md §3. */
 
 export const dynamic = "force-dynamic";
@@ -14,10 +15,13 @@ export const dynamic = "force-dynamic";
 export async function generateMetadata({
   params,
 }: {
-  params: Promise<{ id: string }>;
+  params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
-  const { id } = await params;
-  const device = await db.device.findUnique({ where: { id }, select: { label: true, mac: true } });
+  const { slug } = await params;
+  const device = await db.device.findUnique({
+    where: { slug },
+    select: { label: true, mac: true },
+  });
   const title = device?.label ?? device?.mac ?? "Device";
   return { title: `${title} — GreenGo Admin` };
 }
@@ -25,33 +29,34 @@ export async function generateMetadata({
 export default async function AdminDeviceDetailPage({
   params,
 }: {
-  params: Promise<{ id: string }>;
+  params: Promise<{ slug: string }>;
 }) {
-  const { id } = await params;
+  const { slug } = await params;
   const session = await getSession();
   if (!session || session.kind !== "admin") {
     redirect("/admin/login");
   }
 
   const [device, adminUser] = await Promise.all([
-    db.device.findUnique({
-      where: { id },
-      include: {
-        tenant: true,
-        claimCodes: { orderBy: { createdAt: "desc" } },
-      },
-    }),
+    resolveAdminDevice(slug),
     db.user.findUnique({ where: { id: session.userId }, select: { email: true } }),
   ]);
-  if (!device) notFound();
+
+  const claimCodes = await db.claimCode.findMany({
+    where: { deviceId: device.id },
+    orderBy: { createdAt: "desc" },
+  });
+  const tenant = device.tenantId
+    ? await db.tenant.findUnique({ where: { id: device.tenantId } })
+    : null;
 
   const now = new Date();
   const isClaimed = !!device.tenantId;
-  const unconsumed = device.claimCodes.find(
+  const unconsumed = claimCodes.find(
     (c) => !c.consumedAt && (!c.expiresAt || c.expiresAt > now),
   );
-  const consumed = device.claimCodes.find((c) => c.consumedAt);
-  const claimCode = (isClaimed ? consumed?.code : unconsumed?.code) ?? device.claimCodes[0]?.code ?? "—";
+  const consumed = claimCodes.find((c) => c.consumedAt);
+  const claimCode = (isClaimed ? consumed?.code : unconsumed?.code) ?? claimCodes[0]?.code ?? "—";
 
   const claimedLabel = isClaimed
     ? device.claimedAt
@@ -59,7 +64,7 @@ export default async function AdminDeviceDetailPage({
       : "Claimed"
     : unconsumed
       ? "Give this claim code to the farmer to bind the device"
-      : device.claimCodes[0]?.consumedAt
+      : claimCodes[0]?.consumedAt
         ? "Claim code already used"
         : "No active claim code — provision again if needed";
 
@@ -89,7 +94,7 @@ export default async function AdminDeviceDetailPage({
             uptime: device.uptimeSeconds != null ? formatUptime(device.uptimeSeconds) : "—",
             signalDbm: device.signalDbm ?? 0,
             batteryV: device.batteryV ?? 0,
-            tenantName: device.tenant?.name ?? "Unclaimed",
+            tenantName: tenant?.name ?? "Unclaimed",
             claimedLabel,
           }}
         />

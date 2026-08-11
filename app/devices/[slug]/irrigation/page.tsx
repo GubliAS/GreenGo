@@ -3,9 +3,12 @@ import { AppTopBar } from "@/components/nav/AppTopBar";
 import { PageTitle } from "@/components/ui/Card";
 import { Cell, DataTable, TableRow, type Column } from "@/components/ui/DataTable";
 import { StatusPill } from "@/components/ui/StatusPill";
+import { requireTenantId } from "@/lib/db";
+import { getSession } from "@/lib/session";
+import { resolveTenantDeviceForSubpath } from "@/lib/device-route";
 
-/* Irrigation log → /devices/[id]/irrigation · source: GreenGo Irrigation Log.dc.html
- * Spec: handoff/tenant.md §3. Copy verbatim. */
+/* Irrigation log → /devices/[slug]/irrigation · source: GreenGo Irrigation Log.dc.html
+ * Spec: handoff/tenant.md §3. */
 
 export const metadata: Metadata = { title: "Irrigation log — GreenGo" };
 
@@ -28,15 +31,19 @@ const EVENTS: { started: string; duration: string; trigger: "AUTO" | "MANUAL"; r
 export default async function IrrigationLogPage({
   params,
 }: {
-  params: Promise<{ id: string }>;
+  params: Promise<{ slug: string }>;
 }) {
-  await params;
+  const { slug } = await params;
+  const session = await getSession();
+  const tenantId = requireTenantId(session?.kind === "tenant" ? session : null);
+  const device = await resolveTenantDeviceForSubpath(slug, tenantId, "irrigation");
+  const title = device.label ?? device.mac;
 
   return (
     <div className="min-h-screen">
-      <AppTopBar active="irrigation" />
+      <AppTopBar active="irrigation" deviceSlug={device.slug} />
       <div className="p-page max-w-table mx-auto flex flex-col gap-4.5">
-        <PageTitle>Irrigation log — Greenhouse 1</PageTitle>
+        <PageTitle>Irrigation log — {title}</PageTitle>
 
         <DataTable columns={COLUMNS} minWidth={640} caption="Irrigation events">
           {EVENTS.map((e) => (

@@ -3,6 +3,7 @@ import crypto from "node:crypto";
 import argon2 from "argon2";
 import { db } from "@/lib/db";
 import { getSession } from "@/lib/session";
+import { allocateDeviceSlug } from "@/lib/slug";
 
 /* POST /api/admin/devices/provision — the admin-side counterpart to claim
  * redemption: generates a device row, a single-use claim code, and an API
@@ -39,9 +40,10 @@ export async function POST(request: Request) {
   const apiKeyHash = await argon2.hash(apiKeyPlaintext, { type: argon2.argon2id });
   const claimCode = randomClaimCode();
   const now = new Date();
+  const slug = await allocateDeviceSlug(label, { mac });
 
   const device = await db.device.create({
-    data: { mac, label, apiKeyHash, firmware: "v1.4.2", createdAt: now },
+    data: { mac, label, slug, apiKeyHash, firmware: "v1.4.2", createdAt: now },
   });
   await db.claimCode.create({
     data: { code: claimCode, deviceId: device.id, createdAt: now },
@@ -60,6 +62,7 @@ export async function POST(request: Request) {
   return NextResponse.json({
     ok: true,
     deviceId: device.id,
+    slug: device.slug,
     claimCode,
     apiKey: apiKeyPlaintext,
   });

@@ -8,6 +8,7 @@ import { NumberedStep } from "@/components/ui/Feedback";
 import { SegmentedBar } from "@/components/ui/SegmentedBar";
 import { StatCard } from "@/components/ui/StatCard";
 import { IconHumidity, IconMoisture, IconPump } from "@/components/icons";
+import { isTenantLoggedIn } from "@/lib/marketing-session";
 
 /* Landing → / · source: GreenGo Landing Page.dc.html
  * Spec: handoff/public.md §1. Copy verbatim. */
@@ -69,10 +70,12 @@ const SPECS = [
   { value: "ESP32", label: "solar-friendly, low-power hardware" },
 ];
 
-export default function LandingPage() {
+export default async function LandingPage() {
+  const loggedIn = await isTenantLoggedIn();
+
   return (
     <div className="max-w-marketing relative mx-auto">
-      <MarketingNav active={null} />
+      <MarketingNav active={null} loggedIn={loggedIn} />
 
       {/* ── Hero ─────────────────────────────────────────────────────────── */}
       <section className="px-5 pt-5">
@@ -115,8 +118,12 @@ export default function LandingPage() {
                 pump on from anywhere.
               </p>
               <div className="flex flex-wrap gap-3">
-                <ButtonLink href="/pricing" variant="primary" size="md">
-                  Request a device
+                <ButtonLink
+                  href={loggedIn ? "/devices" : "/pricing"}
+                  variant="primary"
+                  size="md"
+                >
+                  {loggedIn ? "Open dashboard" : "Request a device"}
                 </ButtonLink>
                 <ButtonLink href="#live" variant="ghostOnPhoto" size="md">
                   See a live reading ↓

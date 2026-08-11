@@ -203,6 +203,7 @@ async function main() {
     data: {
       mac: "A4:CF:12:8E:3B:01",
       label: "Greenhouse 1",
+      slug: "greenhouse-1",
       tenantId: tenant.id,
       apiKeyHash: deviceApiKeyHash,
       firmware: "v1.4.2",
@@ -253,6 +254,7 @@ async function main() {
   const unclaimedDevice = await db.device.create({
     data: {
       mac: "A4:CF:12:8E:3B:02",
+      slug: "device-3b02",
       apiKeyHash: unclaimedApiKeyHash,
       firmware: "v1.4.2",
       createdAt: new Date(NOW.getTime() - 2 * 24 * 60 * 60 * 1000),
@@ -271,6 +273,7 @@ async function main() {
   const spareA = await db.device.create({
     data: {
       mac: "A4:CF:12:8E:3B:03",
+      slug: "device-3b03",
       apiKeyHash: await argon2.hash("spare-a", { type: argon2.argon2id }),
       firmware: "v1.4.2",
     },
@@ -284,6 +287,7 @@ async function main() {
   const spareB = await db.device.create({
     data: {
       mac: "A4:CF:12:8E:3B:04",
+      slug: "device-3b04",
       apiKeyHash: await argon2.hash("spare-b", { type: argon2.argon2id }),
       firmware: "v1.4.2",
     },

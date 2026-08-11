@@ -3,6 +3,7 @@ import { MarketingNav } from "@/components/nav/MarketingNav";
 import { MarketingFooter } from "@/components/nav/MarketingFooter";
 import { LiveDemoReadings } from "@/components/marketing/LiveDemoReadings";
 import { ButtonLink } from "@/components/ui/Button";
+import { isTenantLoggedIn } from "@/lib/marketing-session";
 
 /* Live Demo → /live-demo · source: GreenGo Live Demo.dc.html
  * Spec: handoff/public.md §3. Copy verbatim. */
@@ -13,10 +14,11 @@ export const metadata: Metadata = {
     "No login, nothing staged. The readings come from the actual sensor unit in our greenhouse, refreshed on the same 10-second cycle it reports on.",
 };
 
-export default function LiveDemoPage() {
+export default async function LiveDemoPage() {
+  const loggedIn = await isTenantLoggedIn();
   return (
     <div className="max-w-marketing relative mx-auto">
-      <MarketingNav active="live-demo" />
+      <MarketingNav active="live-demo" loggedIn={loggedIn} />
 
       <section className="px-section-x pt-16 text-center">
         <div className="text-caption tracking-wide rounded-card bg-mint text-canopy mb-4.5 inline-flex items-center gap-2 px-4 py-1.75 font-semibold">

@@ -114,7 +114,7 @@ export function PumpControl({
   const v = resolvePumpView({ state, mode, relayOn, lastSeenLabel });
 
   return (
-    <div className="border-hair border-hairline rounded-card flex flex-col gap-3.5 bg-white p-5.5">
+    <div className="border-hair border-hairline rounded-card flex flex-col gap-3.5 bg-white p-5 sm:p-5.5">
       <div className="flex items-center justify-between gap-2">
         <span className="text-sm text-canopy font-semibold">Pump</span>
         <StatusPill tone="stone" size="sm">
@@ -125,7 +125,7 @@ export function PumpControl({
       <div className="flex items-center gap-2.5">
         <StateDot state={v.dotState} on={v.dotOn} size={10} />
         <span
-          className="font-mono text-xl text-canopy font-semibold"
+          className="font-mono text-lg text-canopy font-semibold sm:text-xl"
           aria-live="polite"
         >
           {v.statusText}
@@ -139,6 +139,7 @@ export function PumpControl({
         size="block"
         disabled={v.disabled}
         onClick={onToggle}
+        className="min-h-12"
       >
         {v.buttonLabel}
       </Button>

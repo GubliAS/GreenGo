@@ -40,6 +40,7 @@ function buildChartPoints(seed: number[]): number[] {
 
 export function DeviceDashboard({
   deviceId,
+  deviceSlug,
   deviceLabel,
   initialState = "confirmed",
   initialPercent = 38,
@@ -50,6 +51,7 @@ export function DeviceDashboard({
   chartSeed = [],
 }: {
   deviceId: string;
+  deviceSlug: string;
   deviceLabel: string;
   initialState?: DeviceState;
   initialPercent?: number;
@@ -155,25 +157,27 @@ export function DeviceDashboard({
   }
 
   return (
-    <div className="max-w-wide mx-auto flex flex-col gap-4.5">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
+    <div className="max-w-wide mx-auto flex flex-col gap-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:gap-4.5">
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
+        <div className="min-w-0">
           <BackLink href="/devices">← All devices</BackLink>
-          <PageTitle className="mt-1.5">{deviceLabel}</PageTitle>
+          <PageTitle className="mt-1.5 truncate">{deviceLabel}</PageTitle>
         </div>
-        <StateSwitcher
-          ariaLabel="Device state (demo)"
-          value={state}
-          onChange={(v) => {
-            setDemoState(v);
-            setPendingUntil(null);
-          }}
-          options={[
-            { value: "confirmed", label: "Confirmed" },
-            { value: "pending", label: "Pending" },
-            { value: "unknown", label: "Unknown" },
-          ]}
-        />
+        <div className="-mx-1 max-w-full overflow-x-auto px-1">
+          <StateSwitcher
+            ariaLabel="Device state (demo)"
+            value={state}
+            onChange={(v) => {
+              setDemoState(v);
+              setPendingUntil(null);
+            }}
+            options={[
+              { value: "confirmed", label: "Confirmed" },
+              { value: "pending", label: "Pending" },
+              { value: "unknown", label: "Unknown" },
+            ]}
+          />
+        </div>
       </div>
 
       {isUnknown && (
@@ -183,14 +187,14 @@ export function DeviceDashboard({
         </AlertBanner>
       )}
 
-      <div className="grid grid-cols-[repeat(auto-fit,minmax(min(300px,100%),1fr))] gap-4.5">
-        <Card variant="hero" className="flex flex-col gap-4.5">
-          <div className="flex items-center justify-between">
+      <div className="grid grid-cols-1 gap-3.5 md:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)] md:gap-4.5">
+        <Card variant="hero" className="flex flex-col gap-4 sm:gap-4.5" data-gg-anim="1">
+          <div className="flex items-center justify-between gap-2">
             <span className="font-mono text-caption text-muted tracking-caps uppercase">
               Soil moisture
             </span>
             <span
-              className={`text-meta flex items-center gap-1.5 font-semibold ${
+              className={`text-meta flex shrink-0 items-center gap-1.5 font-semibold ${
                 isUnknown ? "text-faint" : "text-leaf"
               }`}
             >
@@ -202,8 +206,8 @@ export function DeviceDashboard({
             </span>
           </div>
 
-          <div className="flex items-baseline gap-3.5">
-            <div className="font-mono text-64 text-canopy leading-none font-semibold">
+          <div className="flex flex-wrap items-baseline gap-2.5 sm:gap-3.5">
+            <div className="font-mono text-canopy text-[clamp(2.75rem,14vw,4rem)] leading-none font-semibold">
               {percent}%
             </div>
             <div className="text-lg text-ink font-semibold">
@@ -225,20 +229,22 @@ export function DeviceDashboard({
           </div>
 
           <div className="border-hairline flex flex-col gap-3.5 border-t pt-4.5">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
               <span className="text-sm text-canopy font-semibold">
                 Moisture, last 24h
               </span>
-              <RangePills
-                value={range}
-                onChange={setRange}
-                options={RANGES.map((r) => ({ value: r, label: r }))}
-              />
+              <div className="-mx-1 overflow-x-auto px-1">
+                <RangePills
+                  value={range}
+                  onChange={setRange}
+                  options={RANGES.map((r) => ({ value: r, label: r }))}
+                />
+              </div>
             </div>
             <MoistureChart points={chartPoints} height={64} />
             <Link
-              href={`/devices/${deviceId}/history`}
-              className="text-meta text-leaf self-start font-semibold"
+              href={`/devices/${deviceSlug}/history`}
+              className="text-meta text-leaf inline-flex min-h-11 items-center self-start font-semibold"
             >
               View full history →
             </Link>
@@ -253,7 +259,10 @@ export function DeviceDashboard({
             onToggle={handleToggle}
           />
 
-          <Card variant="compact" className="grid grid-cols-[repeat(auto-fit,minmax(min(130px,100%),1fr))] gap-3.5">
+          <Card
+            variant="compact"
+            className="grid grid-cols-2 gap-3.5 sm:grid-cols-[repeat(auto-fit,minmax(min(130px,100%),1fr))]"
+          >
             <MetricReadout
               label="Air temp"
               value={isUnknown || metrics.tempC === null ? "—" : metrics.tempC}

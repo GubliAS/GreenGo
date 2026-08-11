@@ -4,6 +4,7 @@ import { MarketingFooter } from "@/components/nav/MarketingFooter";
 import { Button } from "@/components/ui/Button";
 import { Eyebrow } from "@/components/ui/Card";
 import { FormField, TextareaField } from "@/components/ui/FormField";
+import { isTenantLoggedIn } from "@/lib/marketing-session";
 
 /* Contact → /contact · source: GreenGo Contact.dc.html
  * Spec: handoff/public.md §5. Copy verbatim.
@@ -15,10 +16,11 @@ export const metadata: Metadata = {
     "Questions about the sensors, the SMS alerts, or getting a device on your farm — we read every message ourselves.",
 };
 
-export default function ContactPage() {
+export default async function ContactPage() {
+  const loggedIn = await isTenantLoggedIn();
   return (
     <div className="max-w-marketing relative mx-auto">
-      <MarketingNav active="contact" />
+      <MarketingNav active="contact" loggedIn={loggedIn} />
 
       <section className="px-section-x grid grid-cols-[repeat(auto-fit,minmax(min(300px,100%),1fr))] items-start gap-14 pt-18 pb-24">
         <div>

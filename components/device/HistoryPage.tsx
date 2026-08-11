@@ -49,7 +49,13 @@ function buildRows(page: number) {
   });
 }
 
-export function HistoryPage({ deviceLabel }: { deviceLabel: string }) {
+export function HistoryPage({
+  deviceLabel,
+  deviceSlug,
+}: {
+  deviceLabel: string;
+  deviceSlug: string;
+}) {
   const [range, setRange] = useState<(typeof RANGES)[number]>("24h");
   const [page, setPage] = useState(1);
   const chartPoints = buildChartPoints();
@@ -59,7 +65,7 @@ export function HistoryPage({ deviceLabel }: { deviceLabel: string }) {
   return (
     <div className="max-w-app mx-auto flex flex-col gap-4.5">
       <div>
-        <BackLink href={`/devices/gh-1`}>← {deviceLabel}</BackLink>
+        <BackLink href={`/devices/${deviceSlug}`}>← {deviceLabel}</BackLink>
         <PageTitle className="mt-1.5">Moisture history — {deviceLabel}</PageTitle>
       </div>
 

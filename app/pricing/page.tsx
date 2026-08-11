@@ -4,6 +4,7 @@ import { MarketingFooter } from "@/components/nav/MarketingFooter";
 import { Button } from "@/components/ui/Button";
 import { Eyebrow } from "@/components/ui/Card";
 import { FormField } from "@/components/ui/FormField";
+import { isTenantLoggedIn } from "@/lib/marketing-session";
 
 /* Pricing → /pricing · source: GreenGo Pricing.dc.html
  * Spec: handoff/public.md §4. Copy verbatim.
@@ -22,10 +23,11 @@ const INCLUDED = [
   "Dashboard access for history and pump control",
 ];
 
-export default function PricingPage() {
+export default async function PricingPage() {
+  const loggedIn = await isTenantLoggedIn();
   return (
     <div className="max-w-marketing relative mx-auto">
-      <MarketingNav active="pricing" />
+      <MarketingNav active="pricing" loggedIn={loggedIn} />
 
       <section className="px-section-x pt-16 text-center">
         <div className="mb-3.5">

@@ -11,7 +11,7 @@ export default function NotificationsPage() {
   return (
     <div className="min-h-screen">
       <AppTopBar active="notifications" />
-      <div className="p-page">
+      <div className="p-page pb-[max(1.5rem,env(safe-area-inset-bottom))]">
         <NotificationsInbox />
       </div>
     </div>

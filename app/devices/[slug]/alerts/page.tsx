@@ -2,11 +2,12 @@ import type { Metadata } from "next";
 import { AppTopBar } from "@/components/nav/AppTopBar";
 import { Card, CardTitle, PageTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
+import { requireTenantId } from "@/lib/db";
+import { getSession } from "@/lib/session";
+import { resolveTenantDeviceForSubpath } from "@/lib/device-route";
 
-/* Alerts & thresholds → /devices/[id]/alerts · source: GreenGo Alerts.dc.html
- * Spec: handoff/tenant.md §4. Copy verbatim. Form is non-functional in Phase 2;
- * wired in Phase 4B. No validation errors designed for these numeric fields;
- * hysteresis and daily SMS cap exist in the schema but have no UI here. */
+/* Alerts & thresholds → /devices/[slug]/alerts · source: GreenGo Alerts.dc.html
+ * Spec: handoff/tenant.md §4. */
 
 export const metadata: Metadata = { title: "Alerts & thresholds — GreenGo" };
 
@@ -21,15 +22,19 @@ const timeField =
 export default async function AlertsPage({
   params,
 }: {
-  params: Promise<{ id: string }>;
+  params: Promise<{ slug: string }>;
 }) {
-  await params;
+  const { slug } = await params;
+  const session = await getSession();
+  const tenantId = requireTenantId(session?.kind === "tenant" ? session : null);
+  const device = await resolveTenantDeviceForSubpath(slug, tenantId, "alerts");
+  const title = device.label ?? device.mac;
 
   return (
     <div className="min-h-screen">
-      <AppTopBar active="alerts" />
+      <AppTopBar active="alerts" deviceSlug={device.slug} />
       <div className="p-page max-w-form-wide mx-auto flex flex-col gap-4.5">
-        <PageTitle>Alerts &amp; thresholds — Greenhouse 1</PageTitle>
+        <PageTitle>Alerts &amp; thresholds — {title}</PageTitle>
 
         <Card className="flex flex-col gap-4.5">
           <CardTitle>Soil moisture</CardTitle>
