@@ -77,7 +77,7 @@ const float TEMP_SCALE = 10.0;
 // Capacitive sensor: DRY reads HIGH, WET reads LOW.
 const int SOIL_DRY_RAW   = 2730;   // probe in open air
 const int SOIL_WET_RAW   = 2200;   // probe in water, up to the mark
-const int LDR_DARK_RAW   = 1000;   // LDR covered with your thumb
+const int LDR_DARK_RAW   = 400;   // LDR covered with your thumb
 const int LDR_BRIGHT_RAW = 4095;   // LDR under your demo lighting
 
 // ====================== BEHAVIOUR =======================
