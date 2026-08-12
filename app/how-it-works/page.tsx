@@ -5,6 +5,7 @@ import { ButtonLink } from "@/components/ui/Button";
 import { Eyebrow } from "@/components/ui/Card";
 import { NumberedStep } from "@/components/ui/Feedback";
 import { isTenantLoggedIn } from "@/lib/marketing-session";
+import Image from "next/image";
 
 /* How It Works → /how-it-works · source: GreenGo How It Works.dc.html
  * Spec: handoff/public.md §2. Copy verbatim. */
@@ -115,14 +116,16 @@ export default async function HowItWorksPage() {
               Rendered as the placeholder it is rather than inventing an image.
               MANIFEST.md §E.2 · needs real product photography. */}
           <div
-            className="border-hair border-line-dashed rounded-card text-meta text-muted flex w-full items-center justify-center border-dashed bg-app p-6 text-center"
+            className="border-hair border-line-dashed rounded-card relative w-full overflow-hidden border-dashed bg-app"
             style={{ aspectRatio: "4 / 5" }}
           >
-            Photo of the device / sensor probe
-            <br />
-            <span className="text-label text-faint">
-              placeholder — no asset in handoff
-            </span>
+            <Image
+              className="object-cover"
+              src="/greengeDevice.jpeg"
+              fill
+              alt="GreenGo device"
+              sizes="(max-width: 768px) 100vw, 40vw"
+            />
           </div>
         </div>
       </section>
