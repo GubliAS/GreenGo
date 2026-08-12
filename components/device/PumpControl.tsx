@@ -62,7 +62,7 @@ export function resolvePumpView({
     return {
       dotState: "pending",
       dotOn: false,
-      statusText: relayOn ? "Turning off… (up to 10s)" : "Turning on… (up to 10s)",
+      statusText: relayOn ? "Turning off… (up to 5s)" : "Turning on… (up to 5s)",
       buttonLabel: "Sending command…",
       disabled: true,
       reason: "",

@@ -51,7 +51,9 @@ const char *DEVICE_API_KEY = "ggk_8c805f31a87a045fd093ae0f2c9fbe5f";
 // MAC is taken from the chip at runtime (WiFi.macAddress()).
 // Provision THAT MAC in the admin UI — do not invent one.
 
-const unsigned long TELEMETRY_PERIOD_MS = 10000;
+// 5s balances freshness vs HTTPS/Vercel load. Don't go much below ~3s —
+// TLS handshake + POST cost dominates, and DHT only updates every 2s anyway.
+const unsigned long TELEMETRY_PERIOD_MS = 5000;
 const unsigned long WIFI_RETRY_MS       = 15000;
 const float         BATTERY_V_FIXED     = 3.7f;  // no battery ADC on this board n
 const unsigned long REMOTE_OFF_HOLD_MS  = 15000; // keep PUMP_OFF long enough to confirm
@@ -332,10 +334,10 @@ void postTelemetry() {
     // Only act when command is a non-null object (has "action").
     if (body.indexOf("\"command\":null") < 0 && body.indexOf("\"action\"") >= 0) {
       String action;
-      long maxRun = 600;
+      long maxRun = 150;
       if (extractJsonString(body, "action", action)) {
         extractJsonNumber(body, "maxRunSeconds", maxRun);
-        if (maxRun <= 0) maxRun = 600;
+        if (maxRun <= 0) maxRun = 150;
         applyRemoteCommand(action, (unsigned long)maxRun);
       }
     }

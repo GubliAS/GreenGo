@@ -11,8 +11,8 @@ import type { CommandAction, Device } from "@prisma/client";
  * is discarded, never delivered; see expireStaleCommands, called on every
  * telemetry post before a new command is selected. */
 
-const PUMP_MAX_RUN_SECONDS = Number(process.env.PUMP_MAX_RUN_SECONDS ?? 600);
-const PUMP_COOLDOWN_SECONDS = Number(process.env.PUMP_COOLDOWN_SECONDS ?? 900);
+const PUMP_MAX_RUN_SECONDS = Number(process.env.PUMP_MAX_RUN_SECONDS ?? 150);
+const PUMP_COOLDOWN_SECONDS = Number(process.env.PUMP_COOLDOWN_SECONDS ?? 300);
 const PUMP_DAILY_RUNTIME_CAP_SECONDS = Number(process.env.PUMP_DAILY_RUNTIME_CAP_SECONDS ?? 3600);
 const COMMAND_TTL_SECONDS = Number(process.env.COMMAND_TTL_SECONDS ?? 60);
 

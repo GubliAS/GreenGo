@@ -48,8 +48,8 @@ export default function AdminConfigPage() {
             Enforced server-side regardless of what the client requests.
           </p>
           <div className="grid grid-cols-[repeat(auto-fit,minmax(min(180px,100%),1fr))] gap-4">
-            <ConfigField label="Max run (s)" defaultValue="600" />
-            <ConfigField label="Cooldown between cycles (s)" defaultValue="900" />
+            <ConfigField label="Max run (s)" defaultValue="150" />
+            <ConfigField label="Cooldown between cycles (s)" defaultValue="300" />
             <ConfigField label="Daily runtime cap (s)" defaultValue="3600" />
             <ConfigField label="Command TTL (s)" defaultValue="60" />
           </div>

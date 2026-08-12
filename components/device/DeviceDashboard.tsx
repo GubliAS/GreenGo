@@ -16,12 +16,14 @@ import type { DeviceState, PumpMode } from "@/lib/types";
 /* Device dashboard → /devices/[id] · source: GreenGo Device Dashboard.dc.html
  * Spec: handoff/tenant.md §2.
  *
- * Live values: short polling (5s) against GET /api/devices/[id]/live. The ESP
- * posts every ~10s; polling is simpler and more reliable on serverless than
+ * Live values: short polling (3s) against GET /api/devices/[id]/live. The ESP
+ * posts every ~5s; polling is simpler and more reliable on serverless than
  * SSE, and matches that cadence without holding open streams. */
 
 const RANGES = ["12h", "24h", "48h", "Week", "Month"] as const;
-const POLL_MS = 5000;
+/* Poll a bit faster than ESP telemetry (~5s) so a new reading usually shows
+ * within one browser tick. Sub-2s polls add load without much freshness gain. */
+const POLL_MS = 3000;
 
 type LiveMetrics = {
   tempC: number | null;
@@ -149,7 +151,7 @@ export function DeviceDashboard({
       toast.push({
         tone: "success",
         title: "Command queued",
-        body: "Waiting for the device to check in (~10s).",
+        body: "Waiting for the device to check in (~5s).",
       });
     } finally {
       setBusy(false);
