@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { BackLink, Card, PageTitle } from "../ui/Card";
 import { AlertBanner } from "../ui/AlertBanner";
 import { SegmentedBar } from "../ui/SegmentedBar";
-import { StateSwitcher, RangePills } from "../ui/SegmentedControl";
+import { RangePills } from "../ui/SegmentedControl";
 import { MoistureChart } from "./MoistureChart";
 import { PumpControl } from "./PumpControl";
 import { MetricReadout } from "../ui/StatCard";
@@ -13,12 +13,14 @@ import { useToast } from "../ui/Toast";
 import { describeMoisture } from "@/lib/moisture";
 import type { DeviceState, PumpMode } from "@/lib/types";
 
-/* Device dashboard → /devices/[id] · source: GreenGo Device Dashboard.dc.html
+/* Device dashboard → /devices/[slug] · source: GreenGo Device Dashboard.dc.html
  * Spec: handoff/tenant.md §2.
  *
  * Live values: short polling (3s) against GET /api/devices/[id]/live. The ESP
  * posts every ~5s; polling is simpler and more reliable on serverless than
- * SSE, and matches that cadence without holding open streams. */
+ * SSE, and matches that cadence without holding open streams.
+ * Device state (confirmed / pending / unknown) is derived only from live
+ * telemetry + in-flight pump commands — no demo overrides. */
 
 const RANGES = ["12h", "24h", "48h", "Week", "Month"] as const;
 /* Poll a bit faster than ESP telemetry (~5s) so a new reading usually shows
@@ -64,7 +66,6 @@ export function DeviceDashboard({
   chartSeed?: number[];
 }) {
   const toast = useToast();
-  const [demoState, setDemoState] = useState<DeviceState | null>(null);
   const [liveState, setLiveState] = useState<DeviceState>(initialState);
   const [percent, setPercent] = useState(initialPercent);
   const [range, setRange] = useState<(typeof RANGES)[number]>("24h");
@@ -75,11 +76,10 @@ export function DeviceDashboard({
   const [chartPoints, setChartPoints] = useState(() => buildChartPoints(chartSeed));
   const [busy, setBusy] = useState(false);
   const [pendingUntil, setPendingUntil] = useState<number | null>(null);
+  const awaitingRelayRef = useRef<boolean | null>(null);
 
   const state: DeviceState =
-    pendingUntil && Date.now() < pendingUntil
-      ? "pending"
-      : (demoState ?? liveState);
+    pendingUntil && Date.now() < pendingUntil ? "pending" : liveState;
   const isUnknown = state === "unknown";
 
   useEffect(() => {
@@ -92,9 +92,10 @@ export function DeviceDashboard({
         const data = await res.json();
         if (cancelled || !data.ok) return;
 
+        const nextRelay = !!data.relayOn;
         setLiveState(data.state as DeviceState);
         if (typeof data.soilPct === "number") setPercent(data.soilPct);
-        setRelayOn(!!data.relayOn);
+        setRelayOn(nextRelay);
         setMode(data.mode as PumpMode);
         setMetrics(data.metrics as LiveMetrics);
         setSeenLabel(data.lastSeenLabel as string);
@@ -102,12 +103,22 @@ export function DeviceDashboard({
           setChartPoints(buildChartPoints(data.chartSeed as number[]));
         }
 
-        // Clear optimistic pending once the live relay matches, or timeout.
-        setPendingUntil((until) => {
-          if (!until) return null;
-          if (Date.now() >= until) return null;
-          return until;
-        });
+        // Drop optimistic pending once the device reports the expected relay
+        // state, or when the wait window expires.
+        const wanted = awaitingRelayRef.current;
+        if (wanted !== null && nextRelay === wanted) {
+          awaitingRelayRef.current = null;
+          setPendingUntil(null);
+        } else {
+          setPendingUntil((until) => {
+            if (!until) return null;
+            if (Date.now() >= until) {
+              awaitingRelayRef.current = null;
+              return null;
+            }
+            return until;
+          });
+        }
       } catch {
         // Keep last good snapshot on transient network blips.
       }
@@ -125,16 +136,21 @@ export function DeviceDashboard({
     if (!pendingUntil) return;
     const remaining = pendingUntil - Date.now();
     if (remaining <= 0) {
+      awaitingRelayRef.current = null;
       setPendingUntil(null);
       return;
     }
-    const t = window.setTimeout(() => setPendingUntil(null), remaining);
+    const t = window.setTimeout(() => {
+      awaitingRelayRef.current = null;
+      setPendingUntil(null);
+    }, remaining);
     return () => window.clearTimeout(t);
   }, [pendingUntil]);
 
   async function handleToggle() {
     setBusy(true);
     const action = relayOn ? "PUMP_OFF" : "PUMP_ON";
+    const wantedRelay = action === "PUMP_ON";
     try {
       const res = await fetch(`/api/devices/${deviceId}/pump`, {
         method: "POST",
@@ -146,7 +162,7 @@ export function DeviceDashboard({
         toast.push({ tone: "danger", title: "Pump command failed", body: data.error });
         return;
       }
-      setDemoState(null);
+      awaitingRelayRef.current = wantedRelay;
       setPendingUntil(Date.now() + 15000);
       toast.push({
         tone: "success",
@@ -160,31 +176,14 @@ export function DeviceDashboard({
 
   return (
     <div className="max-w-wide mx-auto flex flex-col gap-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:gap-4.5">
-      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
-        <div className="min-w-0">
-          <BackLink href="/devices">← All devices</BackLink>
-          <PageTitle className="mt-1.5 truncate">{deviceLabel}</PageTitle>
-        </div>
-        <div className="-mx-1 max-w-full overflow-x-auto px-1">
-          <StateSwitcher
-            ariaLabel="Device state (demo)"
-            value={state}
-            onChange={(v) => {
-              setDemoState(v);
-              setPendingUntil(null);
-            }}
-            options={[
-              { value: "confirmed", label: "Confirmed" },
-              { value: "pending", label: "Pending" },
-              { value: "unknown", label: "Unknown" },
-            ]}
-          />
-        </div>
+      <div className="min-w-0">
+        <BackLink href="/devices">← All devices</BackLink>
+        <PageTitle className="mt-1.5 truncate">{deviceLabel}</PageTitle>
       </div>
 
       {isUnknown && (
         <AlertBanner tone="warn" icon live="alert">
-          Device hasn&apos;t reported in 4 minutes. Readings below are the last
+          Device hasn&apos;t reported recently. Readings below are the last
           known values, not live.
         </AlertBanner>
       )}
@@ -227,7 +226,7 @@ export function DeviceDashboard({
           />
 
           <div className="text-meta text-muted">
-            {isUnknown ? "Last reading 4 min ago — treat as stale" : seenLabel}
+            {isUnknown ? `${seenLabel} — treat as stale` : seenLabel}
           </div>
 
           <div className="border-hairline flex flex-col gap-3.5 border-t pt-4.5">
