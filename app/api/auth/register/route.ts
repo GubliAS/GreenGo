@@ -3,6 +3,7 @@ import argon2 from "argon2";
 import { db } from "@/lib/db";
 import { normalizePhoneE164 } from "@/lib/auth";
 import { setSessionCookie } from "@/lib/session";
+import { ensureDeviceAlertSetup } from "@/lib/device-defaults";
 
 /* POST /api/auth/register — the Login page's claim flow, "details" step
  * onward: a brand-new tenant claiming their first device.
@@ -98,6 +99,8 @@ export async function POST(request: Request) {
           createdAt: now,
         },
       });
+
+      await ensureDeviceAlertSetup(device.id, tenant.id, tx);
 
       return { user, tenant, device };
     });

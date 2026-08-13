@@ -5,54 +5,37 @@ import { PageTitle, Card } from "../ui/Card";
 import { EmptyState } from "../ui/Feedback";
 import { Pagination } from "../ui/Pagination";
 
-/* /notifications — DEV-005, no handoff design. Nearest reference is the Admin
- * Fleet Overview activity feed (8px coloured dot + bold actor + text +
- * timestamp), reused here for the tenant's own notification kinds
- * (handoff/tenant.md §9). */
+/* /notifications — DEV-005. Server supplies real Alert/Command rows. */
 
-type Kind = "alert" | "command" | "failure";
+export type NotificationKind = "alert" | "command" | "failure";
 
-const DOT: Record<Kind, string> = {
+export type NotificationItem = {
+  id: string;
+  kind: NotificationKind;
+  text: string;
+  time: string;
+  at: number;
+  unread: boolean;
+};
+
+const DOT: Record<NotificationKind, string> = {
   alert: "bg-warn",
   command: "bg-leaf",
   failure: "bg-danger",
 };
 
-const MOCK: { id: string; kind: Kind; text: string; time: string; unread: boolean }[] = [
-  {
-    id: "1",
-    kind: "alert",
-    text: "Soil alert — 24% (below 30% threshold) on Greenhouse 1",
-    time: "8 minutes ago",
-    unread: true,
-  },
-  {
-    id: "2",
-    kind: "command",
-    text: "Pump turned on automatically (AUTO, soil below threshold)",
-    time: "8 minutes ago",
-    unread: true,
-  },
-  {
-    id: "3",
-    kind: "command",
-    text: "Pump command confirmed — ran 4m 20s, soil reached 70%",
-    time: "Today, 6:19 AM",
-    unread: false,
-  },
-  {
-    id: "4",
-    kind: "failure",
-    text: "Pump command failed — device did not acknowledge within 10s",
-    time: "3 days ago",
-    unread: false,
-  },
-];
+const PAGE_SIZE = 10;
 
-export function NotificationsInbox() {
-  const [items, setItems] = useState(MOCK);
+export function NotificationsInbox({
+  initialItems,
+}: {
+  initialItems: NotificationItem[];
+}) {
+  const [items, setItems] = useState(initialItems);
   const [page, setPage] = useState(1);
   const unreadCount = items.filter((i) => i.unread).length;
+  const pageCount = Math.max(1, Math.ceil(items.length / PAGE_SIZE));
+  const pageItems = items.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   return (
     <div className="max-w-table mx-auto flex flex-col gap-4 sm:gap-4.5">
@@ -69,11 +52,14 @@ export function NotificationsInbox() {
       </div>
 
       {items.length === 0 ? (
-        <EmptyState title="No notifications yet" body="Alerts and pump activity will show up here." />
+        <EmptyState
+          title="No notifications yet"
+          body="Alerts and pump activity for your devices will show up here."
+        />
       ) : (
         <>
           <Card className="flex flex-col gap-0 overflow-hidden p-0">
-            {items.map((item, i) => (
+            {pageItems.map((item, i) => (
               <div
                 key={item.id}
                 className={`flex items-start gap-3 px-4 py-3.5 sm:px-6 sm:py-4 ${
@@ -91,7 +77,14 @@ export function NotificationsInbox() {
               </div>
             ))}
           </Card>
-          <Pagination page={page} pageCount={1} onPageChange={setPage} label="Notification pages" />
+          <Pagination
+            page={page}
+            pageCount={pageCount}
+            totalRows={items.length}
+            pageSize={PAGE_SIZE}
+            onPageChange={setPage}
+            label="Notification pages"
+          />
         </>
       )}
     </div>

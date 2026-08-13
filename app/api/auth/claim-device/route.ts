@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getSession } from "@/lib/session";
+import { ensureDeviceAlertSetup } from "@/lib/device-defaults";
 
 /* POST /api/auth/claim-device — Add Device page: an already-authenticated
  * tenant claiming an additional greenhouse. Same atomic single-use
@@ -47,6 +48,8 @@ export async function POST(request: Request) {
           createdAt: now,
         },
       });
+
+      await ensureDeviceAlertSetup(device.id, session.tenantId, tx);
 
       return device;
     });
